@@ -1,0 +1,395 @@
+# Scaffold-ETH 2 Quick Reference
+
+Quick reference for AI agents working with Scaffold-ETH 2 projects.
+
+---
+
+## Project Structure
+
+```
+scaffold-eth-2/
+├── packages/
+│   ├── foundry/                    # Smart contracts (Foundry)
+│   │   ├── contracts/              # Solidity contracts
+│   │   │   └── YourContract.sol    # Main contract
+│   │   ├── script/                 # Deployment scripts
+│   │   │   └── Deploy.s.sol        # Main deploy script
+│   │   ├── test/                   # Foundry tests
+│   │   └── foundry.toml            # Foundry configuration
+│   │
+│   └── nextjs/                     # Frontend (Next.js 14)
+│       ├── app/                    # App router pages
+│       │   ├── page.tsx            # Home page
+│       │   ├── debug/              # Contract debug UI
+│       │   └── blockexplorer/      # Local block explorer
+│       ├── components/             # React components
+│       │   └── scaffold-eth/       # SE2 components
+│       ├── contracts/              # Generated ABIs
+│       │   └── deployedContracts.ts
+│       ├── hooks/                  # React hooks
+│       │   └── scaffold-eth/       # Contract hooks
+│       ├── utils/                  # Utilities
+│       └── scaffold.config.ts      # Frontend config
+│
+├── package.json                    # Root package.json
+└── yarn.lock
+```
+
+---
+
+## Key Commands
+
+```bash
+# Install dependencies
+yarn install
+
+# Start local chain (Anvil)
+yarn chain
+
+# Fork a network
+yarn fork --network base
+
+# Deploy contracts
+yarn deploy
+
+# Deploy with reset (redeploy all)
+yarn deploy --reset
+
+# Start frontend
+yarn start
+
+# Run contract tests
+yarn foundry:test
+
+# Compile contracts
+yarn foundry:build
+
+# Generate contract types
+yarn generate
+```
+
+---
+
+## Common Contract Patterns
+
+### Basic Contract with Owner
+
+```solidity
+// packages/foundry/contracts/YourContract.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract YourContract is Ownable {
+    string public greeting = "Hello!";
+    uint256 public counter;
+    
+    event GreetingChanged(string newGreeting);
+    event CounterIncremented(uint256 newValue);
+    
+    constructor(address _owner) Ownable(_owner) {}
+    
+    function setGreeting(string memory _greeting) public {
+        greeting = _greeting;
+        emit GreetingChanged(_greeting);
+    }
+    
+    function increment() public {
+        counter++;
+        emit CounterIncremented(counter);
+    }
+}
+```
+
+### Deploy Script
+
+```solidity
+// packages/foundry/script/Deploy.s.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "./DeployHelpers.s.sol";
+import "../contracts/YourContract.sol";
+
+contract DeployScript is ScaffoldETHDeploy {
+    function run() external ScaffoldEthDeployerRunner {
+        YourContract yourContract = new YourContract(deployer);
+        console.log("YourContract deployed to:", address(yourContract));
+    }
+}
+```
+
+---
+
+## Frontend Hooks
+
+### Reading Contract State
+
+```tsx
+import { useScaffoldContractRead } from "~~/hooks/scaffold-eth";
+
+function MyComponent() {
+  const { data: greeting } = useScaffoldContractRead({
+    contractName: "YourContract",
+    functionName: "greeting",
+  });
+  
+  return <div>{greeting}</div>;
+}
+```
+
+### Writing to Contract
+
+```tsx
+import { useScaffoldContractWrite } from "~~/hooks/scaffold-eth";
+
+function MyComponent() {
+  const { writeAsync: setGreeting, isLoading } = useScaffoldContractWrite({
+    contractName: "YourContract",
+    functionName: "setGreeting",
+    args: ["New greeting!"],
+  });
+  
+  return (
+    <button onClick={() => setGreeting()} disabled={isLoading}>
+      {isLoading ? "Setting..." : "Set Greeting"}
+    </button>
+  );
+}
+```
+
+### Watching Events
+
+```tsx
+import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
+
+function MyComponent() {
+  const { data: events } = useScaffoldEventHistory({
+    contractName: "YourContract",
+    eventName: "GreetingChanged",
+    fromBlock: 0n,
+  });
+  
+  return (
+    <ul>
+      {events?.map((event, i) => (
+        <li key={i}>{event.args.newGreeting}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### Using Contract Address
+
+```tsx
+import { useDeployedContractInfo } from "~~/hooks/scaffold-eth";
+
+function MyComponent() {
+  const { data: contractInfo } = useDeployedContractInfo("YourContract");
+  
+  return <div>Contract: {contractInfo?.address}</div>;
+}
+```
+
+---
+
+## Creating New Pages
+
+```tsx
+// packages/nextjs/app/mypage/page.tsx
+"use client";
+
+import type { NextPage } from "next";
+import { useAccount } from "wagmi";
+import { Address } from "~~/components/scaffold-eth";
+
+const MyPage: NextPage = () => {
+  const { address } = useAccount();
+  
+  return (
+    <div className="flex flex-col items-center pt-10">
+      <h1 className="text-4xl font-bold">My Page</h1>
+      
+      {address ? (
+        <div className="mt-4">
+          Connected: <Address address={address} />
+        </div>
+      ) : (
+        <div className="mt-4">Please connect wallet</div>
+      )}
+    </div>
+  );
+};
+
+export default MyPage;
+```
+
+---
+
+## Scaffold-ETH Components
+
+### Address Display
+
+```tsx
+import { Address } from "~~/components/scaffold-eth";
+
+<Address address="0x..." />
+<Address address="0x..." format="short" />
+```
+
+### Balance Display
+
+```tsx
+import { Balance } from "~~/components/scaffold-eth";
+
+<Balance address="0x..." />
+```
+
+### Block Number
+
+```tsx
+import { useBlockNumber } from "wagmi";
+
+const { data: blockNumber } = useBlockNumber();
+```
+
+### Input Components
+
+```tsx
+import { AddressInput, IntegerInput, EtherInput } from "~~/components/scaffold-eth";
+
+<AddressInput value={address} onChange={setAddress} />
+<IntegerInput value={amount} onChange={setAmount} />
+<EtherInput value={eth} onChange={setEth} />
+```
+
+---
+
+## Configuration
+
+### scaffold.config.ts
+
+```typescript
+// packages/nextjs/scaffold.config.ts
+import { defineChain } from "viem";
+
+export const scaffoldConfig = {
+  targetNetworks: [chains.foundry], // or chains.mainnet, chains.base, etc.
+  pollingInterval: 30000,
+  alchemyApiKey: process.env.NEXT_PUBLIC_ALCHEMY_API_KEY,
+  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID,
+  onlyLocalBurnerWallet: true,
+};
+```
+
+### foundry.toml
+
+```toml
+# packages/foundry/foundry.toml
+[profile.default]
+src = 'contracts'
+out = 'out'
+libs = ['lib']
+solc_version = '0.8.20'
+
+[rpc_endpoints]
+mainnet = "${MAINNET_RPC_URL}"
+base = "https://mainnet.base.org"
+```
+
+---
+
+## Testing Contracts
+
+```solidity
+// packages/foundry/test/YourContract.t.sol
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "forge-std/Test.sol";
+import "../contracts/YourContract.sol";
+
+contract YourContractTest is Test {
+    YourContract public yourContract;
+    address public owner = address(1);
+    
+    function setUp() public {
+        yourContract = new YourContract(owner);
+    }
+    
+    function testInitialGreeting() public {
+        assertEq(yourContract.greeting(), "Hello!");
+    }
+    
+    function testSetGreeting() public {
+        yourContract.setGreeting("New greeting");
+        assertEq(yourContract.greeting(), "New greeting");
+    }
+    
+    function testIncrement() public {
+        yourContract.increment();
+        assertEq(yourContract.counter(), 1);
+    }
+}
+```
+
+---
+
+## Environment Variables
+
+```bash
+# packages/foundry/.env (for deployments)
+DEPLOYER_PRIVATE_KEY=0x...  # Only for testnet/mainnet
+ETHERSCAN_API_KEY=...
+
+# packages/nextjs/.env.local (for frontend)
+NEXT_PUBLIC_ALCHEMY_API_KEY=...
+NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=...
+```
+
+---
+
+## Useful Patterns
+
+### Payable Function
+
+```solidity
+function deposit() public payable {
+    require(msg.value > 0, "Must send ETH");
+    balances[msg.sender] += msg.value;
+}
+```
+
+### Withdraw Pattern
+
+```solidity
+function withdraw(uint256 amount) public {
+    require(balances[msg.sender] >= amount, "Insufficient balance");
+    balances[msg.sender] -= amount;
+    (bool success,) = msg.sender.call{value: amount}("");
+    require(success, "Transfer failed");
+}
+```
+
+### Access Control
+
+```solidity
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract MyContract is Ownable {
+    function adminOnly() public onlyOwner {
+        // Only owner can call
+    }
+}
+```
+
+---
+
+## Debugging Tips
+
+1. **Check deployment**: Visit `/debug` in the frontend to see all contract functions
+2. **Check events**: Visit `/blockexplorer` to see transactions and events
+3. **Console logs**: Use `console.log` in Solidity (from forge-std)
+4. **Fork testing**: Use `yarn fork --network mainnet` to test against real state
