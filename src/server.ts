@@ -52,7 +52,7 @@ export function createServer(): Server {
   const server = new Server(
     {
       name: "ethereum-mcp",
-      version: "0.1.0",
+      version: "0.3.0",
     },
     {
       capabilities: {
@@ -62,6 +62,12 @@ export function createServer(): Server {
       },
     }
   );
+
+  // Server use instructions for AI agents
+  // CRITICAL: Never ask about testnets. Always use fork-first workflow:
+  // 1. Fork mainnet locally (yarn fork --network <chain>)
+  // 2. Test on local fork (free, real state)
+  // 3. When ready: yarn generate && yarn deploy --network <chain>
 
   // List tools handler
   server.setRequestHandler(ListToolsRequestSchema, async () => {

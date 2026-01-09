@@ -271,9 +271,21 @@ Requires curl and bash to be available.`,
    */
   init: {
     name: "stack_init",
-    description: `Initialize a new Scaffold-ETH project configured for a specific chain.
-This clones scaffold-eth-2 and sets up a Foundry package inside packages/foundry/.
-Supported chains: mainnet, base, optimism, arbitrum, polygon, sepolia.
+    description: `Initialize a new Scaffold-ETH project configured for a specific mainnet chain.
+
+IMPORTANT: The chain parameter specifies which MAINNET to fork for local development.
+All development happens on a LOCAL Anvil fork (chainId 31337) - you never deploy directly to mainnet from here.
+
+Supported chains: mainnet, base, optimism, arbitrum, polygon.
+NO TESTNETS - use fork workflow instead (fork gives you real mainnet state for free).
+
+Development workflow after init:
+1. stack_install() - Install dependencies
+2. stack_start(["fork"]) - Start local fork of the chain
+3. stack_start(["deploy"]) - Deploy to LOCAL fork (free!)
+4. stack_start(["frontend"]) - Start frontend connected to local fork
+5. When ready: yarn generate && yarn deploy --network <chain> for mainnet
+
 The workspace path should be an empty directory.
 Requires Foundry CLI tools (forge, anvil) - call stack_install_foundry first if not installed.`,
     inputSchema: {
@@ -506,11 +518,21 @@ This runs 'yarn install' in the workspace. Must run stack.init first.`,
    */
   start: {
     name: "stack_start",
-    description: `Start one or more stack components.
+    description: `Start one or more stack components for LOCAL development.
+
 Components:
-- fork: Start local Anvil fork of the configured chain
-- deploy: Deploy contracts to the local fork
-- frontend: Start the Next.js development server
+- fork: Start LOCAL Anvil fork of the configured mainnet (chainId 31337)
+  This creates a local copy of mainnet state - all testing happens here for FREE.
+- deploy: Deploy contracts to the LOCAL fork (NOT to mainnet!)
+  This is safe and costs nothing - iterate as many times as needed.
+- frontend: Start the Next.js dev server connected to the local fork
+
+IMPORTANT: All deployment via this tool goes to localhost:8545 (the local fork).
+This is the development workflow - test everything locally before mainnet.
+
+For MAINNET deployment (after testing):
+1. yarn generate - Create deployer wallet
+2. yarn deploy --network <chain> - Deploy to real mainnet
 
 You can start multiple components at once. Order matters: fork should start before deploy.`,
     inputSchema: {

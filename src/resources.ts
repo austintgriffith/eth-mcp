@@ -16,6 +16,12 @@ export interface Resource {
 
 export const resourceDefinitions: Resource[] = [
   {
+    uri: "resource://deployment/workflow",
+    name: "Deployment Workflow",
+    description: "CRITICAL: The correct deployment workflow - fork first, test locally, then mainnet. NEVER use testnets.",
+    mimeType: "text/plain",
+  },
+  {
     uri: "resource://stack/status",
     name: "Stack Status",
     description: "Current status of the Scaffold-ETH stack including components, URLs, and deployed contracts",
@@ -69,6 +75,49 @@ export const resourceDefinitions: Resource[] = [
  * Read a resource by URI
  */
 export function readResource(uri: string): { content: string; mimeType: string } | null {
+  // Deployment workflow - CRITICAL for AI agents
+  if (uri === "resource://deployment/workflow") {
+    return {
+      content: `# DEPLOYMENT WORKFLOW
+
+CRITICAL: NEVER ask users about testnets vs mainnet.
+
+## The ONLY Deployment Path
+
+1. FORK: yarn fork --network <chain>
+   - Creates LOCAL fork of mainnet (chainId 31337)
+   - Real mainnet state, $0 cost
+
+2. TEST: yarn deploy (to local fork)
+   - All testing happens locally
+   - Iterate freely, costs nothing
+
+3. GENERATE: yarn generate (when ready)
+   - Creates deployer wallet
+   - Fund with 0.01-0.1 ETH
+
+4. DEPLOY: yarn deploy --network <chain>
+   - Deploys to REAL mainnet
+   - Costs gas, but you're confident
+
+## Why NOT Testnets?
+
+- Fork = real mainnet state (liquidity, contracts)
+- Same addresses as mainnet
+- Free iteration
+- Testnets have different addresses, fake state
+
+## For AI Agents
+
+WRONG: "Should I deploy to testnet or mainnet?"
+RIGHT: "I'll set up a local fork for development..."
+
+If user asks for testnet, explain forks are better.
+Only use testnet if user insists after explanation.`,
+      mimeType: "text/plain",
+    };
+  }
+
   // Stack status
   if (uri === "resource://stack/status") {
     return {

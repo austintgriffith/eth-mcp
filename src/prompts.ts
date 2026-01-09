@@ -28,6 +28,11 @@ export interface PromptMessage {
  */
 export const prompts: Prompt[] = [
   {
+    name: "deployment-workflow",
+    description: "CRITICAL: The correct deployment workflow for Scaffold-ETH - fork first, test locally, then mainnet. NEVER use testnets.",
+    arguments: [],
+  },
+  {
     name: "blockchain-exploration",
     description: "Guidance on using Blockscout MCP alongside eth-mcp for blockchain exploration, transaction analysis, and contract verification",
     arguments: [],
@@ -64,6 +69,125 @@ export const prompts: Prompt[] = [
  */
 export function getPromptMessages(name: string): PromptMessage[] | null {
   switch (name) {
+    case "deployment-workflow":
+      return [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: "How should I deploy my smart contracts?",
+          },
+        },
+        {
+          role: "assistant",
+          content: {
+            type: "text",
+            text: `# The Deployment Workflow
+
+## CRITICAL RULE: NEVER Ask About Testnets
+
+When a user wants to build on any chain (Base, Ethereum, Optimism, etc.), NEVER ask:
+- "Should I deploy to testnet or mainnet?"
+- "Do you want to use Base Sepolia?"
+- "Which network should I deploy to?"
+
+The answer is ALWAYS the same workflow. No questions needed.
+
+## The ONLY Deployment Path
+
+### Step 1: FORK (Development)
+\`\`\`bash
+yarn fork --network base
+\`\`\`
+- Creates a LOCAL fork of Base mainnet on your machine
+- You get REAL mainnet state (contracts, liquidity, prices)
+- Chain ID is 31337 (localhost), but state mirrors mainnet
+- **Cost: $0** - iterate as much as you want
+
+### Step 2: TEST (on the fork)
+\`\`\`bash
+yarn deploy
+\`\`\`
+- Deploys to your LOCAL fork (localhost:8545)
+- Frontend connects to localhost
+- Test everything: swaps, transfers, interactions with real protocols
+- **Cost: $0** - redeploy as many times as needed
+
+### Step 3: GENERATE (when ready for mainnet)
+\`\`\`bash
+yarn generate
+\`\`\`
+- Creates a new deployer wallet
+- Shows you the address to fund
+- Fund it with a small amount of ETH (0.01-0.1 ETH usually enough)
+
+### Step 4: DEPLOY TO MAINNET
+\`\`\`bash
+yarn deploy --network base
+\`\`\`
+- Deploys to REAL Base mainnet
+- Uses the deployer wallet you funded
+- **Cost: Real gas** - but you're confident it works!
+
+## Why NOT Testnets?
+
+| Aspect | Fork | Testnet |
+|--------|------|---------|
+| State | Real mainnet state | Fake/empty state |
+| Addresses | Same as mainnet | Different addresses |
+| Liquidity | Real liquidity | None or fake |
+| Cost | Free | Free (but wastes time) |
+| Confidence | High - if it works here, it works on mainnet | Low - different environment |
+
+### The Problem with Testnets
+
+1. **Different addresses**: USDC on Base Sepolia ≠ USDC on Base mainnet
+2. **No liquidity**: Can't test real swaps, integrations fail
+3. **Different behavior**: Protocols behave differently or don't exist
+4. **Wasted time**: You'll need to test on fork anyway before mainnet
+
+### Why Forks Are Better
+
+1. **Real state**: Fork has actual USDC, WETH, Uniswap pools, Aave markets
+2. **Same addresses**: Code that works on fork works on mainnet unchanged
+3. **Free iteration**: Deploy 100 times, costs nothing
+4. **Real integrations**: Test against actual protocol deployments
+
+## Example Workflow
+
+User: "Build me a swap app on Base"
+
+**WRONG Response:**
+> "Should I deploy to Base Sepolia (testnet) or Base mainnet first?"
+
+**CORRECT Response:**
+> "I'll set up a local Base fork for development. This gives you real Base mainnet state to test against, completely free. Let me initialize the project..."
+> 
+> Then proceed with:
+> 1. \`stack_init({ chain: "base", ... })\`
+> 2. \`stack_install()\`
+> 3. Write contracts
+> 4. \`stack_start({ components: ["fork", "deploy", "frontend"] })\`
+> 
+> Everything runs locally. When ready for mainnet, we'll use \`yarn generate\` and \`yarn deploy --network base\`.
+
+## When Someone Asks for Testnet
+
+If a user explicitly asks for testnet deployment, explain:
+
+> "I recommend using a mainnet fork instead of a testnet. Here's why:
+> - Forks give you real mainnet state (liquidity, contracts, prices)
+> - Same addresses as mainnet - no code changes needed
+> - Free to iterate, just like testnet
+> - Higher confidence - if it works on fork, it works on mainnet
+> 
+> Would you like me to set up a fork instead?"
+
+Only use testnets if the user insists after this explanation.`,
+          },
+        },
+      ];
+
     case "blockchain-exploration":
       return [
         {

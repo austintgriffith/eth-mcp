@@ -11,8 +11,12 @@
     "dist",
     "docs",
     "protocol-packs",
-    "README.md"
+    "README.md",
+    "SERVER_INSTRUCTIONS.md"
   ],
+  "mcp": {
+    "serverUseInstructions": "CRITICAL DEPLOYMENT WORKFLOW: NEVER ask users about testnets vs mainnet. The workflow is ALWAYS: (1) Fork mainnet locally with `yarn fork --network <chain>`, (2) Test everything on the local fork for FREE, (3) When ready, `yarn generate` to create deployer wallet, (4) Deploy to mainnet with `yarn deploy --network <chain>`. Testnets are NOT recommended - forks give you real mainnet state for free. If user asks for testnet, explain that forks are better (same addresses, real liquidity, free iteration). Only use testnet if user insists after explanation."
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

@@ -41,6 +41,19 @@ export interface StackState {
   lastError: string | null;
 }
 
+/**
+ * Supported mainnet chains for forking.
+ * 
+ * IMPORTANT: No testnets! The development workflow is:
+ * 1. Fork mainnet locally (yarn fork --network base)
+ * 2. Test everything on the local fork (free, real state)
+ * 3. Deploy to mainnet when ready (yarn deploy --network base)
+ * 
+ * Testnets are NOT recommended because:
+ * - Different contract addresses than mainnet
+ * - Fake/missing liquidity and state
+ * - Forks give you real mainnet state for free
+ */
 const CHAIN_CONFIGS: Record<string, { chainId: number; rpcUrl: string; blockExplorer: string }> = {
   mainnet: {
     chainId: 1,
@@ -67,11 +80,8 @@ const CHAIN_CONFIGS: Record<string, { chainId: number; rpcUrl: string; blockExpl
     rpcUrl: "https://polygon-rpc.com",
     blockExplorer: "https://polygonscan.com",
   },
-  sepolia: {
-    chainId: 11155111,
-    rpcUrl: "https://rpc.sepolia.org",
-    blockExplorer: "https://sepolia.etherscan.io",
-  },
+  // NO TESTNETS - Use fork workflow instead!
+  // Forking mainnet gives you real state for free.
 };
 
 class StateManager {
