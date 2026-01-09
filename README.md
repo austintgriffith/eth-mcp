@@ -15,7 +15,7 @@ Add to your Cursor MCP config (`~/.cursor/mcp.json`):
   "mcpServers": {
     "eth-mcp": {
       "command": "npx",
-      "args": ["-y", "eth-mcp"]
+      "args": ["-y", "eth-mcp@latest"]
     }
   }
 }
