@@ -36,11 +36,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/austintgriffith/ethereum-mcp.git"
+    "url": "git+https://github.com/austintgriffith/eth-mcp.git"
   },
-  "homepage": "https://github.com/austintgriffith/ethereum-mcp#readme",
+  "homepage": "https://github.com/austintgriffith/eth-mcp#readme",
   "bugs": {
-    "url": "https://github.com/austintgriffith/ethereum-mcp/issues"
+    "url": "https://github.com/austintgriffith/eth-mcp/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"

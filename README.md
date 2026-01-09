@@ -46,8 +46,8 @@ This enables AI agents to go from natural language to running dApp without manua
 
 ```bash
 # Clone the repo
-git clone https://github.com/austintgriffith/ethereum-mcp
-cd ethereum-mcp
+git clone https://github.com/austintgriffith/eth-mcp
+cd eth-mcp
 
 # Install dependencies
 npm install
@@ -65,7 +65,7 @@ Add to your MCP settings:
   "mcpServers": {
     "eth-mcp": {
       "command": "node",
-      "args": ["/path/to/ethereum-mcp/dist/index.js"]
+      "args": ["/path/to/eth-mcp/dist/index.js"]
     }
   }
 }
