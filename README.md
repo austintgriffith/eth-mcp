@@ -37,8 +37,79 @@ eth-mcp is a Model Context Protocol (MCP) server that:
 4. **Exposes logs and status** - Resources for agent polling
 5. **Includes Web3 knowledge** - Guides for incentive design and Solidity patterns
 6. **DeFi address registry** - Token and protocol addresses across 5 chains
+7. **DeFi yield tools** - Query live APY/TVL data from DefiLlama
 
 This enables AI agents to go from natural language to running dApp without manual intervention.
+
+---
+
+## Recommended MCP Stack
+
+eth-mcp is designed to work alongside companion MCP servers for a **complete Ethereum development experience**. We strongly recommend installing all three:
+
+| MCP Server | Purpose | Essential For |
+|------------|---------|---------------|
+| **eth-mcp** | Build, deploy, run local dev | Core functionality |
+| **mcp-server-ens** | ENS name resolution | Resolving .eth names (vitalik.eth → 0x...) |
+| **@blockscout/mcp-server** | Blockchain exploration | Tx analysis, contract ABIs, on-chain data |
+
+### Full Configuration (Recommended)
+
+Add all three to your `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "eth-mcp": {
+      "command": "npx",
+      "args": ["-y", "eth-mcp@latest"]
+    },
+    "ens": {
+      "command": "npx",
+      "args": ["-y", "mcp-server-ens"]
+    },
+    "blockscout": {
+      "command": "npx",
+      "args": ["-y", "@blockscout/mcp-server"]
+    }
+  }
+}
+```
+
+### Division of Responsibilities
+
+| Task | eth-mcp | ENS MCP | Blockscout |
+|------|:-------:|:-------:|:----------:|
+| Scaffold project | ✅ | | |
+| Deploy contracts | ✅ | | |
+| Run local fork | ✅ | | |
+| Start frontend | ✅ | | |
+| Resolve vitalik.eth | | ✅ | |
+| Get ENS records (avatar, socials) | | ✅ | |
+| Check mainnet balances | | | ✅ |
+| Analyze transactions | | | ✅ |
+| Get contract ABIs | | | ✅ |
+| Look up token addresses | ✅ (registry) | | ✅ (live) |
+| Query live yield data | ✅ | | |
+
+### Example Workflow
+
+```
+1. Use ENS MCP to resolve "vitalik.eth" to get the address
+2. Use Blockscout to check their USDC balance and recent transactions
+3. Use eth-mcp to scaffold a project that interacts with their address
+4. Use eth-mcp to write and deploy contracts locally
+5. Use Blockscout to verify mainnet state your fork is based on
+6. Use eth-mcp to start frontend and test
+```
+
+### Why All Three?
+
+- **eth-mcp** handles the **local development loop**: scaffolding, forking, deploying, hot-reloading
+- **ENS MCP** handles **name resolution**: converting human-readable .eth names to addresses
+- **Blockscout** handles **blockchain exploration**: reading mainnet state, analyzing transactions, fetching ABIs
+
+The AI agent orchestrates all three, choosing the right tool for each task.
 
 ---
 

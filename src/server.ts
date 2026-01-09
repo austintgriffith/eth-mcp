@@ -9,13 +9,17 @@ import {
   ListToolsRequestSchema,
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
 import { stackTools } from "./tools/stack.js";
 import { processTools } from "./tools/process.js";
 import { projectTools } from "./tools/project.js";
 import { addressTools } from "./tools/addresses.js";
+import { defiTools } from "./tools/defi.js";
 import { listResources, readResource } from "./resources.js";
+import { prompts, getPromptMessages } from "./prompts.js";
 
 // Tool type for registry
 interface Tool {
@@ -39,6 +43,9 @@ const allTools: Record<string, Tool> = {
   ...Object.fromEntries(
     Object.entries(addressTools).map(([_, tool]) => [tool.name, tool as Tool])
   ),
+  ...Object.fromEntries(
+    Object.entries(defiTools).map(([_, tool]) => [tool.name, tool as Tool])
+  ),
 };
 
 export function createServer(): Server {
@@ -51,6 +58,7 @@ export function createServer(): Server {
       capabilities: {
         tools: {},
         resources: {},
+        prompts: {},
       },
     }
   );
@@ -139,6 +147,31 @@ export function createServer(): Server {
           text: result.content,
         },
       ],
+    };
+  });
+
+  // List prompts handler
+  server.setRequestHandler(ListPromptsRequestSchema, async () => {
+    return {
+      prompts: prompts.map((prompt) => ({
+        name: prompt.name,
+        description: prompt.description,
+        arguments: prompt.arguments,
+      })),
+    };
+  });
+
+  // Get prompt handler
+  server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+    const { name } = request.params;
+    const messages = getPromptMessages(name);
+
+    if (!messages) {
+      throw new Error(`Prompt not found: ${name}`);
+    }
+
+    return {
+      messages,
     };
   });
 

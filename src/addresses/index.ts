@@ -106,6 +106,56 @@ export const ETHEREUM_MAINNET: ChainAddresses = {
       decimals: 18,
       name: "Curve DAO Token",
     },
+    CVX: {
+      address: "0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B",
+      symbol: "CVX",
+      decimals: 18,
+      name: "Convex Token",
+    },
+    // Liquid Staking Derivatives
+    weETH: {
+      address: "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+      symbol: "weETH",
+      decimals: 18,
+      name: "Wrapped eETH (Ether.fi)",
+    },
+    rsETH: {
+      address: "0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7",
+      symbol: "rsETH",
+      decimals: 18,
+      name: "KelpDAO Restaked ETH",
+    },
+    swETH: {
+      address: "0xf951E335afb289353dc249e82926178EaC7DEd78",
+      symbol: "swETH",
+      decimals: 18,
+      name: "Swell ETH",
+    },
+    ezETH: {
+      address: "0xbf5495Efe5DB9ce00f80364C8B423567e58d2110",
+      symbol: "ezETH",
+      decimals: 18,
+      name: "Renzo ezETH",
+    },
+    // Yield tokens
+    sDAI: {
+      address: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+      symbol: "sDAI",
+      decimals: 18,
+      name: "Savings DAI",
+    },
+    sUSDe: {
+      address: "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+      symbol: "sUSDe",
+      decimals: 18,
+      name: "Staked USDe (Ethena)",
+    },
+    USDe: {
+      address: "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+      symbol: "USDe",
+      decimals: 18,
+      name: "USDe (Ethena)",
+    },
   },
   protocols: {
     uniswapV2: {
@@ -153,6 +203,69 @@ export const ETHEREUM_MAINNET: ChainAddresses = {
     ens: {
       registry: "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e",
       resolver: "0x231b0Ee14048e9dCcD1d247744d114a4EB5E8E63",
+    },
+    // Yield Aggregators
+    yearnV3: {
+      registry: "0xff31A1B020c868F6eA3f61Eb953344920EeCA3af",
+      router: "0x1112dbCF805682e828606f74AB717abf4b4FD8DE",
+    },
+    convex: {
+      booster: "0xF403C135812408BFbE8713b5A23a04b3D48AAE31",
+      cvxRewards: "0xCF50b810E57Ac33B91dCF525C6ddd9881B139332",
+      crvDepositor: "0x8014595F2AB54cD7c604B00E9fb932176fDc86Ae",
+    },
+    pendle: {
+      router: "0x00000000005BBB0EF59571E58418F9a4357b68A0",
+      routerStatic: "0x263833d47eA3fA4a30f269323aba6a107f9eB14C",
+      ptOracle: "0x66a1096C6366b2529274dF4f5D8247827fe4CEA8",
+    },
+    // Additional Lending
+    morphoBlue: {
+      morpho: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+      bundler: "0x4095F064B8d3c3548A3bebfd0Bbfd04750E30077",
+    },
+    spark: {
+      pool: "0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+      poolDataProvider: "0xFc21d6d146E6086B8359705C8b28512a983db0cb",
+    },
+    // Restaking
+    eigenLayer: {
+      strategyManager: "0x858646372CC42E1A627fcE94aa7A7033e7CF075A",
+      delegationManager: "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
+      eigenPodManager: "0x91E677b07F7AF907ec9a428aafA9fc14a0d3A338",
+      stETHStrategy: "0x93c4b944D05dfe6df7645A86cd2206016c51564D",
+    },
+    etherfi: {
+      liquidityPool: "0x308861A430be4cce5502d0A12724771Fc6DaF216",
+      eETH: "0x35fA164735182de50811E8e2E824cFb9B6118ac2",
+      weETH: "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+      withdrawRequestNFT: "0x7d5706f6ef3F89B3951E23e557CDFBC3239D4E2c",
+    },
+    kelp: {
+      depositPool: "0x036676389e48133B63a802f8635AD39E752D375D",
+      rsETH: "0xA1290d69c65A6Fe4DF752f95823fae25cB99e5A7",
+    },
+    renzo: {
+      restakeManager: "0x74a09653A083691711cF8215a6ab074BB4e99ef5",
+      ezETH: "0xbf5495Efe5DB9ce00f80364C8B423567e58d2110",
+    },
+    // Ethena
+    ethena: {
+      USDe: "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+      sUSDe: "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+      stakingRewards: "0x8707f238936c12c309bfc2B9959C35828AcFc512",
+    },
+    // Bridges
+    stargate: {
+      router: "0x8731d54E9D02c286767d56ac03e8037C07e01e98",
+      factory: "0x06D538690AF257Da524f25D0CD52fD85b1c2173E",
+    },
+    across: {
+      spokePool: "0x5c7BCd6E7De5423a257D81B442095A1a6ced35C5",
+    },
+    layerZero: {
+      endpoint: "0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675",
+      ultraLightNodeV2: "0x4D73AdB72bC3DD368966edD0f0b2148401A178E2",
     },
   },
 };
@@ -212,6 +325,24 @@ export const BASE: ChainAddresses = {
       decimals: 18,
       name: "Aerodrome",
     },
+    weETH: {
+      address: "0x04C0599Ae5A44757c0af6F9eC3b93da8976c150A",
+      symbol: "weETH",
+      decimals: 18,
+      name: "Wrapped eETH (Ether.fi)",
+    },
+    ezETH: {
+      address: "0x2416092f143378750bb29b79eD961ab195CcEea5",
+      symbol: "ezETH",
+      decimals: 18,
+      name: "Renzo ezETH",
+    },
+    rsETH: {
+      address: "0x1Bc71130A0e39942a7658878169764Ee8CE71aB0",
+      symbol: "rsETH",
+      decimals: 18,
+      name: "KelpDAO Restaked ETH",
+    },
   },
   protocols: {
     uniswapV3: {
@@ -248,6 +379,24 @@ export const BASE: ChainAddresses = {
       ETH_USD: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70",
       USDC_USD: "0x7e860098F58bBFC8648a4311b374B1D669a2bc6B",
       cbETH_USD: "0xd7818272B9e248357d13057AAb0B417aF31E817d",
+    },
+    // Yield Aggregators
+    beefy: {
+      vault: "0x4Aca31B33De2E7460f7a06d4E5B9D66f1C86F4FC",
+    },
+    extraFi: {
+      lendingPool: "0xBB505c54D71E9e599cB8435b4F0cEEc05fC71cbD",
+    },
+    // Bridges
+    stargate: {
+      router: "0x45f1A95A4D3f3836523F5c83673c797f4d4d263B",
+      stargatePoolNative: "0xdc181Bd607330aeeBEF6ea62e03e5e1Fb4B6F7C7",
+    },
+    across: {
+      spokePool: "0x09aea4b2242abC8bb4BB78D537A67a245A7bEC64",
+    },
+    layerZero: {
+      endpoint: "0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7",
     },
   },
 };
@@ -319,6 +468,18 @@ export const OPTIMISM: ChainAddresses = {
       decimals: 18,
       name: "Velodrome",
     },
+    weETH: {
+      address: "0x5A7fACB970D094B6C7FF1df0eA68D99E6e73CBFF",
+      symbol: "weETH",
+      decimals: 18,
+      name: "Wrapped eETH (Ether.fi)",
+    },
+    ezETH: {
+      address: "0x2416092f143378750bb29b79eD961ab195CcEea5",
+      symbol: "ezETH",
+      decimals: 18,
+      name: "Renzo ezETH",
+    },
   },
   protocols: {
     uniswapV3: {
@@ -343,6 +504,20 @@ export const OPTIMISM: ChainAddresses = {
       BTC_USD: "0xD702DD976Fb76Fffc2D3963D037dfDae5b04E593",
       USDC_USD: "0x16a9FA2FDa030272Ce99B29CF780dFA30361E0f3",
       OP_USD: "0x0D276FC14719f9292D5C1eA2198673d1f4269246",
+    },
+    // Yield Aggregators
+    beefy: {
+      vault: "0x4Aca31B33De2E7460f7a06d4E5B9D66f1C86F4FC",
+    },
+    // Bridges
+    stargate: {
+      router: "0xB0D502E938ed5f4df2E681fE6E419ff29631d62b",
+    },
+    across: {
+      spokePool: "0x6f26Bf09B1C792e3228e5467807a900A503c0281",
+    },
+    layerZero: {
+      endpoint: "0x3c2269811836af69497E5F486A85D7316753cf62",
     },
   },
 };
@@ -414,6 +589,30 @@ export const ARBITRUM: ChainAddresses = {
       decimals: 18,
       name: "GMX",
     },
+    weETH: {
+      address: "0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe",
+      symbol: "weETH",
+      decimals: 18,
+      name: "Wrapped eETH (Ether.fi)",
+    },
+    ezETH: {
+      address: "0x2416092f143378750bb29b79eD961ab195CcEea5",
+      symbol: "ezETH",
+      decimals: 18,
+      name: "Renzo ezETH",
+    },
+    rsETH: {
+      address: "0x4186BFC76E2E237523CBC30FD220FE055156b41F",
+      symbol: "rsETH",
+      decimals: 18,
+      name: "KelpDAO Restaked ETH",
+    },
+    PENDLE: {
+      address: "0x0c880f6761F1af8d9Aa9C466984b80DAb9a8c9e8",
+      symbol: "PENDLE",
+      decimals: 18,
+      name: "Pendle",
+    },
   },
   protocols: {
     uniswapV3: {
@@ -444,6 +643,27 @@ export const ARBITRUM: ChainAddresses = {
       BTC_USD: "0x6ce185860a4963106506C203335A2910DCDDB8DB",
       USDC_USD: "0x50834F3163758fcC1Df9973b6e91f0F0F0434aD3",
       ARB_USD: "0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6",
+    },
+    // Yield Aggregators
+    pendle: {
+      router: "0x00000000005BBB0EF59571E58418F9a4357b68A0",
+      routerStatic: "0xAdB09F65bd90d19e3148D9ccb693F3161C6DB3E8",
+      ptOracle: "0x1Fd95db7B7C0067De8D45C0cb35D59796adfD187",
+      market_eETH: "0x952083cde7aaa11AB8449057F7de23A970AA8472",
+      market_rsETH: "0x6Ae79089b2CF4be441480801571cd78A90A0E26e",
+    },
+    beefy: {
+      vault: "0x4Aca31B33De2E7460f7a06d4E5B9D66f1C86F4FC",
+    },
+    // Bridges
+    stargate: {
+      router: "0x53Bf833A5d6c4ddA888F69c22C88C9f356a41614",
+    },
+    across: {
+      spokePool: "0xe35e9842fceaCA96570B734083f4a58e8F7C5f2A",
+    },
+    layerZero: {
+      endpoint: "0x3c2269811836af69497E5F486A85D7316753cf62",
     },
   },
 };
@@ -526,6 +746,20 @@ export const POLYGON: ChainAddresses = {
       ETH_USD: "0xF9680D99D6C9589e2a93a78A04A279e509205945",
       BTC_USD: "0xc907E116054Ad103354f2D350FD2514433D57F6f",
       USDC_USD: "0xfE4A8cc5b5B2366C1B58Bea3858e81843581b2F7",
+    },
+    // Yield Aggregators
+    beefy: {
+      vault: "0x4Aca31B33De2E7460f7a06d4E5B9D66f1C86F4FC",
+    },
+    // Bridges
+    stargate: {
+      router: "0x45A01E4e04F14f7A4a6702c74187c5F6222033cd",
+    },
+    across: {
+      spokePool: "0x9295ee1d8C5b022Be115A2AD3c30C72E34e7F096",
+    },
+    layerZero: {
+      endpoint: "0x3c2269811836af69497E5F486A85D7316753cf62",
     },
   },
 };

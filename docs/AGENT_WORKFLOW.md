@@ -289,3 +289,101 @@ while True:
 6. **Test incrementally** - Deploy and test contracts before building full UI
 
 7. **Keep user informed** - Provide status updates during long operations
+
+8. **Use companion MCPs** - Combine eth-mcp with Blockscout for complete coverage
+
+---
+
+## Multi-MCP Workflows
+
+eth-mcp works best alongside **Blockscout MCP** for blockchain exploration. Here's how to use them together.
+
+### Division of Responsibilities
+
+| Task | eth-mcp | Blockscout MCP |
+|------|---------|----------------|
+| Scaffold project | ✅ | |
+| Deploy contracts | ✅ | |
+| Run local fork | ✅ | |
+| Start frontend | ✅ | |
+| Check mainnet state | | ✅ |
+| Analyze transactions | | ✅ |
+| Get contract ABIs | | ✅ |
+| Look up token addresses | ✅ (local registry) | ✅ (live chain) |
+
+### Example: Building a Uniswap Integration
+
+**Phase 1: Research (Blockscout)**
+
+Before building, use Blockscout to understand what you're integrating with:
+
+```json
+// Find USDC address on Base
+{ "tool": "blockscout.lookup_token_by_symbol", "arguments": { "chain_id": "8453", "symbol": "USDC" } }
+
+// Get Uniswap V3 Router ABI
+{ "tool": "blockscout.get_contract_abi", "arguments": { "chain_id": "8453", "address": "0x2626664c2603336E57B271c5C0b26F421741e481" } }
+
+// Analyze a successful swap transaction
+{ "tool": "blockscout.transaction_summary", "arguments": { "chain_id": "8453", "transaction_hash": "0x..." } }
+```
+
+**Phase 2: Build (eth-mcp)**
+
+Use eth-mcp to create and deploy your project:
+
+```json
+// Initialize project
+{ "tool": "stack_init", "arguments": { "template": "scaffold-eth", "chain": "base", "workspacePath": "/home/user/swap-app" } }
+
+// Install dependencies
+{ "tool": "stack_install", "arguments": {} }
+
+// Write swap contract
+{ "tool": "project_writeFile", "arguments": { "path": "packages/foundry/contracts/SwapHelper.sol", "content": "..." } }
+
+// Deploy locally
+{ "tool": "stack_start", "arguments": { "components": ["fork", "deploy"] } }
+```
+
+**Phase 3: Verify (Blockscout)**
+
+After deploying to your local fork, verify state matches mainnet:
+
+```json
+// Check USDC balance of a whale address on mainnet
+{ "tool": "blockscout.get_tokens_by_address", "arguments": { "chain_id": "8453", "address": "0x..." } }
+
+// Verify your fork has the same state
+// (Compare with local RPC calls)
+```
+
+**Phase 4: Test & Iterate**
+
+```json
+// Start frontend
+{ "tool": "stack_start", "arguments": { "components": ["frontend"] } }
+
+// Check logs if issues
+{ "tool": "process_logs", "arguments": { "id": "frontend", "tail": 50 } }
+
+// Make changes and redeploy
+{ "tool": "project_writeFile", "arguments": { "path": "...", "content": "..." } }
+{ "tool": "stack_start", "arguments": { "components": ["deploy"] } }
+```
+
+### When to Use Each MCP
+
+**Use eth-mcp when:**
+- Creating new projects
+- Writing/modifying contracts
+- Deploying to local fork
+- Running frontend dev server
+- Managing local processes
+
+**Use Blockscout when:**
+- Researching existing contracts
+- Looking up mainnet addresses
+- Analyzing transaction patterns
+- Debugging by comparing mainnet state
+- Verifying contract ABIs before integration
