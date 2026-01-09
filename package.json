@@ -1,17 +1,24 @@
 {
-  "name": "ethereum-mcp",
+  "name": "eth-mcp",
   "version": "0.1.0",
   "description": "MCP server for AI-driven Ethereum development with Scaffold-ETH",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "ethereum-mcp": "dist/index.js"
+    "eth-mcp": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "docs",
+    "protocol-packs",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "mcp",
@@ -19,10 +26,22 @@
     "scaffold-eth",
     "web3",
     "ai",
-    "model-context-protocol"
+    "model-context-protocol",
+    "foundry",
+    "solidity",
+    "defi",
+    "smart-contracts"
   ],
-  "author": "",
+  "author": "Austin Griffith",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/austintgriffith/ethereum-mcp.git"
+  },
+  "homepage": "https://github.com/austintgriffith/ethereum-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/austintgriffith/ethereum-mcp/issues"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0"
   },

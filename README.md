@@ -1,38 +1,52 @@
-# ethereum-mcp
+# eth-mcp
 
 MCP server that enables AI agents to build and deploy Ethereum applications using Scaffold-ETH.
 
 **The AI is the planner. The MCP server is the executor.**
 
+---
+
+## Quick Start
+
+Add to your Cursor MCP config (`~/.cursor/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "eth-mcp": {
+      "command": "npx",
+      "args": ["-y", "eth-mcp"]
+    }
+  }
+}
 ```
-"Build me a swapping app with a 1% tax token using Uniswap v4"
-                              ↓
-                     [ethereum-mcp]
-                              ↓
-              Local app running at localhost:3000
-```
+
+Restart Cursor. Done! Now ask your AI:
+
+> "Build me a swapping app with a 1% tax token on Base"
 
 ---
 
 ## What This Does
 
-ethereum-mcp is a Model Context Protocol (MCP) server that:
+eth-mcp is a Model Context Protocol (MCP) server that:
 
 1. **Clones and configures Scaffold-ETH projects** - Foundry + Next.js stack
 2. **Manages long-running processes** - Anvil fork, contract deployment, frontend
 3. **Provides file access** - Read/write project files
 4. **Exposes logs and status** - Resources for agent polling
 5. **Includes Web3 knowledge** - Guides for incentive design and Solidity patterns
+6. **DeFi address registry** - Token and protocol addresses across 5 chains
 
 This enables AI agents to go from natural language to running dApp without manual intervention.
 
 ---
 
-## Installation
+## Alternative Installation (from source)
 
 ```bash
 # Clone the repo
-git clone https://github.com/your-org/ethereum-mcp
+git clone https://github.com/austintgriffith/ethereum-mcp
 cd ethereum-mcp
 
 # Install dependencies
@@ -42,16 +56,14 @@ npm install
 npm run build
 ```
 
-### Configure MCP Client
-
-**For Claude Code / Cursor:**
+### Configure MCP Client (local)
 
 Add to your MCP settings:
 
 ```json
 {
   "mcpServers": {
-    "ethereum-mcp": {
+    "eth-mcp": {
       "command": "node",
       "args": ["/path/to/ethereum-mcp/dist/index.js"]
     }
@@ -211,7 +223,7 @@ The server enforces several safety constraints:
 └─────────────────────────┬───────────────────────────────────┘
                           │ MCP Protocol
 ┌─────────────────────────▼───────────────────────────────────┐
-│                    ethereum-mcp                             │
+│                       eth-mcp                               │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
 │  │  Stack   │  │ Process  │  │ Project  │  │Resources │   │
 │  │  Tools   │  │ Manager  │  │  Tools   │  │          │   │
