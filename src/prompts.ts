@@ -104,7 +104,19 @@ export function getPromptMessages(name: string): PromptMessage[] | null {
             type: "text",
             text: `# The Deployment Workflow
 
-## CRITICAL RULE: NEVER Ask About Testnets
+## CRITICAL RULE #1: Interactive Commands - User Must Run Manually
+
+**These commands require password input and CANNOT be run by AI tools:**
+
+| Command | Why Interactive | What AI Should Do |
+|---------|-----------------|-------------------|
+| \`yarn generate\` | Sets keystore password | Guide user to run manually |
+| \`yarn account\` | May need password | Guide user to run manually |
+| \`yarn deploy --network <chain>\` | Needs keystore password | Guide user to run manually |
+
+**If you try to run these via MCP tools, they will HANG waiting for input that never arrives.**
+
+## CRITICAL RULE #2: NEVER Ask About Testnets
 
 When a user wants to build on any chain (Base, Ethereum, Optimism, etc.), NEVER ask:
 - "Should I deploy to testnet or mainnet?"
@@ -115,7 +127,7 @@ The answer is ALWAYS the same workflow. No questions needed.
 
 ## The ONLY Deployment Path
 
-### Step 1: FORK (Development)
+### Step 1: FORK (Development) - AI Can Run
 \`\`\`bash
 yarn fork --network base
 \`\`\`
@@ -124,7 +136,7 @@ yarn fork --network base
 - Chain ID is 31337 (localhost), but state mirrors mainnet
 - **Cost: $0** - iterate as much as you want
 
-### Step 2: TEST (on the fork)
+### Step 2: TEST (on the fork) - AI Can Run
 \`\`\`bash
 yarn deploy
 \`\`\`
@@ -133,13 +145,22 @@ yarn deploy
 - Test everything: swaps, transfers, interactions with real protocols
 - **Cost: $0** - redeploy as many times as needed
 
-### Step 3: GENERATE (when ready for mainnet)
+### Step 3: GENERATE (when ready for mainnet) - ⚠️ USER MUST RUN
 \`\`\`bash
 yarn generate
 \`\`\`
+**⚠️ INTERACTIVE - User must run this manually!**
 - Creates a new deployer wallet
+- Prompts for password (AI cannot provide this)
 - Shows you the address to fund
-- Fund it based on your target chain (see below)
+
+### Step 4: CHECK ACCOUNT - ⚠️ USER MUST RUN
+\`\`\`bash
+yarn account
+\`\`\`
+**⚠️ INTERACTIVE - May prompt for password!**
+- Shows deployer address and balances
+- User copies address to fund
 
 **Funding by Chain:**
 | Chain | Amount Needed | Why |
@@ -151,13 +172,44 @@ yarn generate
 
 **L2s are CHEAP!** Don't overfund - 0.001 ETH on Base is enough for many deploys!
 
-### Step 4: DEPLOY TO MAINNET
+### Step 5: DEPLOY TO MAINNET - ⚠️ USER MUST RUN
 \`\`\`bash
 yarn deploy --network base
 \`\`\`
+**⚠️ INTERACTIVE - Requires keystore password!**
 - Deploys to REAL Base mainnet
 - Uses the deployer wallet you funded
 - **Cost: Real gas** - but L2s cost <$1 per deploy!
+
+## What to Say When User is Ready for Mainnet
+
+When the user has finished testing on the fork and wants to deploy to mainnet, provide these instructions:
+
+> "Great! To deploy to mainnet, you'll need to run a few commands yourself (they require password input that I can't provide):
+> 
+> \`\`\`bash
+> cd /path/to/your/project
+> 
+> # Step 1: Create your encrypted deployer account
+> yarn generate
+> # Enter a secure password - REMEMBER IT!
+> 
+> # Step 2: Check your deployer address
+> yarn account
+> # Copy the address shown
+> 
+> # Step 3: Fund the deployer (see amounts below)
+> 
+> # Step 4: Deploy to mainnet
+> yarn deploy --network [chain]
+> # Enter your password when prompted
+> \`\`\`
+> 
+> **Funding amounts:**
+> - L2s (Base, Optimism, Arbitrum): 0.001-0.002 ETH
+> - Ethereum mainnet: 0.01-0.05 ETH
+> 
+> Let me know when you're done and I can help verify the deployment!"
 
 ## Why NOT Testnets?
 
@@ -190,6 +242,10 @@ User: "Build me a swap app on Base"
 **WRONG Response:**
 > "Should I deploy to Base Sepolia (testnet) or Base mainnet first?"
 
+**ALSO WRONG Response:**
+> "Let me run yarn generate for you..."
+(This will HANG because it needs password input!)
+
 **CORRECT Response:**
 > "I'll set up a local Base fork for development. This gives you real Base mainnet state to test against, completely free. Let me initialize the project..."
 > 
@@ -199,7 +255,7 @@ User: "Build me a swap app on Base"
 > 3. Write contracts
 > 4. \`stack_start({ components: ["fork", "deploy", "frontend"] })\`
 > 
-> Everything runs locally. When ready for mainnet, we'll use \`yarn generate\`, fund the deployer with ~0.001 ETH (Base is very cheap - under $1 per deploy), and \`yarn deploy --network base\`.
+> Everything runs locally. When you're ready for mainnet, you'll need to run a few commands manually (they require password input). I'll give you the exact steps when you're ready!
 
 ## When Someone Asks for Testnet
 

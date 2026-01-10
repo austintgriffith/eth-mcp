@@ -105,11 +105,15 @@ This means you (or an AI agent) can:
 
 **When you deploy to mainnet**, users connect real wallets (MetaMask, etc.) and confirm transactions as expected.
 
-### Step 5: Generate Deployer (When Ready)
+### Step 5: Generate Deployer (When Ready) - ⚠️ INTERACTIVE
 
 ```bash
 yarn generate
 ```
+
+**⚠️ INTERACTIVE COMMAND - User must run manually!**
+
+This command prompts for password input and CANNOT be run by AI tools.
 
 Creates a new **ENCRYPTED** deployer account:
 - You'll be prompted to set a password
@@ -119,11 +123,13 @@ Creates a new **ENCRYPTED** deployer account:
 
 **Your private key is NEVER stored in plain text.**
 
-### Step 6: Check Deployer Address & Fund It
+### Step 6: Check Deployer Address & Fund It - ⚠️ INTERACTIVE
 
 ```bash
 yarn account
 ```
+
+**⚠️ INTERACTIVE COMMAND - May prompt for password! User should run manually.**
 
 Shows your deployer address and balances:
 - Copy the address
@@ -176,11 +182,15 @@ NEXT_PUBLIC_ALCHEMY_API_KEY=YOUR_API_KEY
 
 **Note**: Ethereum mainnet can use the free BuidlGuidl RPC (`mainnet.rpc.buidlguidl.com`) without an API key.
 
-### Step 7: Deploy to Mainnet
+### Step 7: Deploy to Mainnet - ⚠️ INTERACTIVE
 
 ```bash
 yarn deploy --network base
 ```
+
+**⚠️ INTERACTIVE COMMAND - User must run manually!**
+
+This command prompts for the keystore password and CANNOT be run by AI tools.
 
 Deploys to REAL mainnet:
 - Prompts for your encryption password
@@ -215,20 +225,58 @@ Encrypted keystores require your password to use.
 
 ## Commands Reference
 
-| Command | What It Does |
-|---------|--------------|
-| `yarn fork --network base` | Start local Base fork |
-| `yarn deploy` | Deploy to local fork |
-| `yarn start` | Start frontend (connects to local) |
-| `yarn generate` | Create encrypted deployer account |
-| `yarn account` | Show deployer address and balances |
-| `yarn deploy --network base` | Deploy to real Base mainnet |
-| `yarn deploy --network mainnet` | Deploy to real Ethereum mainnet |
-| `yarn deploy --network optimism` | Deploy to real Optimism mainnet |
+| Command | What It Does | Interactive? |
+|---------|--------------|--------------|
+| `yarn fork --network base` | Start local Base fork | No - AI can run |
+| `yarn deploy` | Deploy to local fork | No - AI can run |
+| `yarn start` | Start frontend (connects to local) | No - AI can run |
+| `yarn generate` | Create encrypted deployer account | **YES** - User must run |
+| `yarn account` | Show deployer address and balances | **YES** - User must run |
+| `yarn deploy --network base` | Deploy to real Base mainnet | **YES** - User must run |
+| `yarn deploy --network mainnet` | Deploy to real Ethereum mainnet | **YES** - User must run |
+| `yarn deploy --network optimism` | Deploy to real Optimism mainnet | **YES** - User must run |
+
+**Interactive commands** require password input and will HANG if run by AI tools.
 
 ---
 
 ## For AI Agents
+
+### CRITICAL: Interactive Commands
+
+**These commands require password input and CANNOT be run by AI tools:**
+
+| Command | Why | What to Do |
+|---------|-----|------------|
+| `yarn generate` | Sets keystore password | Guide user to run manually |
+| `yarn account` | May need password | Guide user to run manually |
+| `yarn deploy --network <chain>` | Needs keystore password | Guide user to run manually |
+
+**If you try to run these via MCP tools, they will HANG waiting for input that never arrives.**
+
+When the user is ready for mainnet deployment, STOP and provide step-by-step instructions:
+
+```
+To deploy to mainnet, you'll need to run these commands yourself 
+(they require password input):
+
+1. cd /path/to/your/project
+
+2. yarn generate
+   → Set a secure password (REMEMBER IT!)
+
+3. yarn account
+   → Copy the deployer address shown
+
+4. Fund the deployer:
+   - L2s (Base/Optimism/Arbitrum): 0.001-0.002 ETH
+   - Ethereum mainnet: 0.01-0.05 ETH
+
+5. yarn deploy --network <chain>
+   → Enter your password when prompted
+
+Let me know when you're done and I can help verify!
+```
 
 ### NEVER Say This
 
@@ -237,6 +285,7 @@ Encrypted keystores require your password to use.
 - "Which network should I deploy to?"
 - "Set DEPLOYER_PRIVATE_KEY in .env"
 - "Add your private key to the .env file"
+- "Let me run yarn generate for you" (IT WILL HANG!)
 
 ### ALWAYS Do This
 
@@ -246,25 +295,50 @@ When user says "build me an app on Base":
 2. Install: `stack_install()`
 3. Write contracts
 4. Start local fork and deploy: `stack_start({ components: ["fork", "deploy", "frontend"] })`
-5. Tell user: "Everything is running locally. When ready for mainnet, run `yarn generate` to create an encrypted deployer, `yarn account` to see the address, fund it, then `yarn deploy --network base`."
+5. Tell user: "Everything is running locally. When ready for mainnet, you'll need to run a few commands manually (they require password input)..." and provide the instructions above.
 
 ### For Mainnet Deployment Instructions
 
-ALWAYS give chain-specific funding amounts:
+**⚠️ These commands are INTERACTIVE - guide user to run them manually!**
+
+ALWAYS:
+1. Explain the commands require password input
+2. Give chain-specific funding amounts
+3. Provide copy-paste ready commands
 
 **For L2s (Base, Optimism, Arbitrum):**
-> "To deploy to [chain]:
-> 1. Run `yarn generate` to create an encrypted deployer account
-> 2. Run `yarn account` to see your deployer address  
-> 3. Fund that address with **0.001-0.002 ETH** (L2 deployments are very cheap - typically <$1)
-> 4. Run `yarn deploy --network [chain]`"
+> "To deploy to [chain], you'll need to run these commands yourself (they require password input that I can't provide):
+> 
+> ```bash
+> cd /path/to/your/project
+> yarn generate          # Set a secure password - REMEMBER IT!
+> yarn account           # Copy the deployer address shown
+> ```
+> 
+> Fund that address with **0.001-0.002 ETH** (L2 deployments are very cheap - typically <$1)
+> 
+> ```bash
+> yarn deploy --network [chain]   # Enter your password when prompted
+> ```
+> 
+> Let me know when you're done and I can help verify!"
 
 **For Ethereum Mainnet:**
-> "To deploy to Ethereum mainnet:
-> 1. Run `yarn generate` to create an encrypted deployer account
-> 2. Run `yarn account` to see your deployer address  
-> 3. Fund that address with **0.01-0.05 ETH** (mainnet is expensive - $20-100 depending on gas)
-> 4. Run `yarn deploy --network mainnet`"
+> "To deploy to Ethereum mainnet, you'll need to run these commands yourself (they require password input that I can't provide):
+> 
+> ```bash
+> cd /path/to/your/project
+> yarn generate          # Set a secure password - REMEMBER IT!
+> yarn account           # Copy the deployer address shown
+> ```
+> 
+> Fund that address with **0.01-0.05 ETH** (mainnet is expensive - $20-100 depending on gas)
+> 
+> ```bash
+> yarn deploy --network mainnet   # Enter your password when prompted
+> ```
+> 
+> Let me know when you're done and I can help verify!"
 
 **IMPORTANT**: Don't tell L2 users to fund with "0.01-0.1 ETH" - that's 10-100x more than needed!
 

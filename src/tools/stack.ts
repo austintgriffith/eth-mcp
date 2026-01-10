@@ -722,18 +722,19 @@ Returns initialization state, component status, URLs, and deployed contracts.`,
   },
 
   /**
-   * stack.generateAccount - Create encrypted deployer account
+   * stack.generateAccount - Guide user to create encrypted deployer account
+   * 
+   * INTERACTIVE COMMAND - Cannot be run by AI tools!
+   * This command prompts for password input which requires a TTY.
    */
   generateAccount: {
     name: "stack_generateAccount",
-    description: `Create an encrypted deployer account for mainnet deployment.
+    description: `INTERACTIVE COMMAND - Returns instructions for the user to run manually.
 
-This runs 'yarn generate' which creates a new keystore in ~/.foundry/keystore (password-protected).
+'yarn generate' creates an encrypted deployer keystore but REQUIRES interactive password input.
+AI tools CANNOT run this command - it will hang waiting for input.
 
-The user will be prompted to set an encryption password.
-REMEMBER: This password is needed for all future deployments.
-
-After generating, run stack_checkAccount to see the deployer address, then fund it with ETH.`,
+This tool returns step-by-step instructions for the user to run in their terminal.`,
     inputSchema: {
       type: "object" as const,
       properties: {},
@@ -750,59 +751,64 @@ After generating, run stack_checkAccount to see the deployer address, then fund 
         return { success: false, error: "Dependencies not installed. Run stack_install first." };
       }
 
-      try {
-        const { stdout, stderr } = await execAsync("yarn generate", {
-          cwd: state.workspacePath,
-          timeout: 60000,
-        });
+      // Get chain from state to provide chain-specific funding guidance
+      const chain = state.config?.chain || "unknown";
+      const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
+      const fundingAmount = isL2 
+        ? "0.001-0.002 ETH (L2s are cheap - deployments cost <$1!)"
+        : chain === "mainnet" 
+          ? "0.01-0.05 ETH (mainnet is expensive - $20-100)"
+          : "appropriate ETH for your chain (L2s: ~0.001 ETH, mainnet: ~0.01-0.05 ETH)";
 
-        // Get chain from state to provide chain-specific funding guidance
-        const chain = state.config?.chain || "unknown";
-        const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
-        const fundingAmount = isL2 
-          ? "0.001-0.002 ETH (L2s are cheap - deployments cost <$1!)"
-          : chain === "mainnet" 
-            ? "0.01-0.05 ETH (mainnet is expensive - $20-100)"
-            : "appropriate ETH for your chain (L2s: ~0.001 ETH, mainnet: ~0.01-0.05 ETH)";
-
-        return {
-          success: true,
-          message: "Deployer account created successfully",
-          output: stdout,
-          note: stderr || undefined,
-          nextSteps: [
-            "Run stack_checkAccount to see your deployer address",
-            `Fund the deployer address with ${fundingAmount}`,
-            `Then run: yarn deploy --network ${chain}`,
-          ],
-        };
-      } catch (err) {
-        const error = err instanceof Error ? err.message : String(err);
-        return {
-          success: false,
-          error,
-          hint: "You can also run 'yarn generate' manually in the project directory",
-        };
-      }
+      // Return instructions instead of executing
+      return {
+        success: true,
+        requiresUserAction: true,
+        message: "INTERACTIVE COMMAND - User must run manually",
+        reason: "yarn generate prompts for a password, which requires terminal input. AI tools cannot provide interactive input.",
+        userInstructions: [
+          `1. Open a terminal in your project directory:`,
+          `   cd ${state.workspacePath}`,
+          ``,
+          `2. Run the generate command:`,
+          `   yarn generate`,
+          ``,
+          `3. When prompted, enter a SECURE password`,
+          `   IMPORTANT: Remember this password! You'll need it for every deployment.`,
+          ``,
+          `4. After generating, check your deployer address:`,
+          `   yarn account`,
+          ``,
+          `5. Fund the deployer address with ${fundingAmount}`,
+          ``,
+          `6. Deploy to mainnet:`,
+          `   yarn deploy --network ${chain}`,
+          `   (You'll be prompted for your password again)`,
+        ],
+        copyPasteCommands: {
+          step1_cd: `cd ${state.workspacePath}`,
+          step2_generate: "yarn generate",
+          step3_account: "yarn account",
+          step4_deploy: `yarn deploy --network ${chain}`,
+        },
+      };
     },
   },
 
   /**
-   * stack.checkAccount - Show deployer account info
+   * stack.checkAccount - Guide user to check deployer account info
+   * 
+   * INTERACTIVE COMMAND - May require password input!
+   * This command may prompt for the keystore password which requires a TTY.
    */
   checkAccount: {
     name: "stack_checkAccount",
-    description: `Show the deployer account address and balances.
+    description: `INTERACTIVE COMMAND - Returns instructions for the user to run manually.
 
-This runs 'yarn account' which displays:
-- Deployer address
-- ETH balance on various networks
+'yarn account' shows the deployer address and balances but MAY prompt for the keystore password.
+AI tools should NOT run this command as it may hang waiting for password input.
 
-Use this to:
-1. Get the address to fund before mainnet deployment
-2. Verify the account has enough ETH for gas
-
-Note: May prompt for the encryption password set during yarn generate.`,
+This tool returns step-by-step instructions for the user to run in their terminal.`,
     inputSchema: {
       type: "object" as const,
       properties: {},
@@ -819,55 +825,44 @@ Note: May prompt for the encryption password set during yarn generate.`,
         return { success: false, error: "Dependencies not installed. Run stack_install first." };
       }
 
-      try {
-        const { stdout, stderr } = await execAsync("yarn account", {
-          cwd: state.workspacePath,
-          timeout: 30000,
-        });
+      // Get chain from state to provide chain-specific funding guidance
+      const chain = state.config?.chain || "unknown";
+      const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
+      const fundingAmount = isL2 
+        ? "0.001-0.002 ETH (L2s are cheap - deployments cost <$1!)"
+        : chain === "mainnet" 
+          ? "0.01-0.05 ETH (mainnet is expensive - $20-100)"
+          : "appropriate ETH for your chain (L2s: ~0.001 ETH, mainnet: ~0.01-0.05 ETH)";
 
-        // Try to extract the address from output
-        const addressMatch = stdout.match(/0x[a-fA-F0-9]{40}/);
-        const address = addressMatch ? addressMatch[0] : null;
-
-        // Get chain from state to provide chain-specific funding guidance
-        const chain = state.config?.chain || "unknown";
-        const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
-        const fundingAmount = isL2 
-          ? "0.001-0.002 ETH (L2s are cheap - deployments cost <$1!)"
-          : chain === "mainnet" 
-            ? "0.01-0.05 ETH (mainnet is expensive - $20-100)"
-            : "appropriate ETH for your chain (L2s: ~0.001 ETH, mainnet: ~0.01-0.05 ETH)";
-
-        return {
-          success: true,
-          address,
-          output: stdout,
-          note: stderr || undefined,
-          nextSteps: address
-            ? [
-                `Fund ${address} with ${fundingAmount}`,
-                `Then run: yarn deploy --network ${chain}`,
-              ]
-            : ["Run stack_generateAccount first to create a deployer account"],
-        };
-      } catch (err) {
-        const error = err instanceof Error ? err.message : String(err);
-        
-        // Check if this is a "no account" error
-        if (error.includes("No deployer") || error.includes("generate")) {
-          return {
-            success: false,
-            error: "No deployer account found",
-            hint: "Run stack_generateAccount first to create an encrypted deployer account",
-          };
-        }
-
-        return {
-          success: false,
-          error,
-          hint: "You can also run 'yarn account' manually in the project directory",
-        };
-      }
+      // Return instructions instead of executing
+      return {
+        success: true,
+        requiresUserAction: true,
+        message: "INTERACTIVE COMMAND - User must run manually",
+        reason: "yarn account may prompt for the keystore password, which requires terminal input. AI tools cannot provide interactive input.",
+        userInstructions: [
+          `1. Open a terminal in your project directory:`,
+          `   cd ${state.workspacePath}`,
+          ``,
+          `2. Check your deployer account:`,
+          `   yarn account`,
+          ``,
+          `3. If prompted, enter your keystore password`,
+          ``,
+          `4. Copy the deployer address shown`,
+          ``,
+          `5. Fund the deployer address with ${fundingAmount}`,
+          ``,
+          `6. Once funded, deploy to mainnet:`,
+          `   yarn deploy --network ${chain}`,
+        ],
+        copyPasteCommands: {
+          step1_cd: `cd ${state.workspacePath}`,
+          step2_account: "yarn account",
+          step3_deploy: `yarn deploy --network ${chain}`,
+        },
+        prerequisite: "If you haven't created a deployer account yet, run 'yarn generate' first.",
+      };
     },
   },
 

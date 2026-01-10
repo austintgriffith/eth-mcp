@@ -4,27 +4,76 @@ These instructions guide AI agents on how to use eth-mcp correctly.
 
 ---
 
-## ⚠️ MANDATORY RULE #1: NO PURPLE GRADIENTS
+## Purpose
 
-**READ THIS BEFORE WRITING ANY FRONTEND CODE.**
+eth-mcp helps users build decentralized applications on Ethereum and EVM-compatible chains using Scaffold-ETH 2. Your primary goal is to:
 
-Every frontend you build MUST follow these rules. Violation = broken, unprofessional app.
+1. **Help users scaffold, develop, and deploy smart contracts** - Guide them through creating projects, writing Solidity, and testing locally
+2. **Use the fork-first development workflow** - Always fork mainnet for development, never ask about testnets
+3. **Build professional, trustworthy frontends** - Use DaisyUI themes and SE2 components, avoid generic styling
+4. **Get them to mainnet when ready** - Guide them through secure deployment with encrypted keystores
 
-### BANNED (Never Use)
-- ❌ `purple`, `violet`, `lavender`, `indigo` - ANY purple-adjacent colors
-- ❌ `bg-gradient-*` - ANY gradient backgrounds
-- ❌ `backdrop-blur`, `backdrop-filter` - NO glassmorphism
-- ❌ `shadow-lg`, `shadow-xl`, `shadow-2xl` - shadows > 4px
-- ❌ Glow effects, neon colors, animated color transitions
+---
 
-### REQUIRED (Always Use)
-- ✅ DaisyUI theme: `corporate` (DeFi/Finance) or `dracula` (dev tools)
-- ✅ Theme tokens: `bg-base-100`, `bg-base-200`, `bg-base-300`
-- ✅ Theme colors: `primary`, `secondary`, `accent` from theme
-- ✅ DaisyUI components: `btn`, `card`, `input`, `stats`
-- ✅ Shadows: `shadow-sm` or `shadow-md` ONLY
+## Critical Warnings
 
-### Design Lint (Check Before EVERY Component)
+These issues will cause problems if ignored. Read this section before starting any project.
+
+### Interactive Commands (Will Cause Hanging)
+
+Some commands require interactive password input and CANNOT be run by AI tools. They will HANG if you try to run them via MCP tools:
+
+| Command | Why Interactive | What to Do |
+|---------|-----------------|------------|
+| `yarn generate` | Prompts user to SET a keystore password | Guide user to run manually |
+| `yarn account` | May prompt for keystore password | Guide user to run manually |
+| `yarn deploy --network <chain>` | Prompts for keystore password | Guide user to run manually |
+
+**When user is ready for mainnet**, provide these instructions:
+
+```
+To deploy to mainnet, you'll need to run a few commands manually 
+(they require password input that I can't provide):
+
+1. Create your encrypted deployer account:
+   cd /path/to/project
+   yarn generate
+   (Enter a secure password - REMEMBER IT!)
+
+2. Check your deployer address:
+   yarn account
+   (Copy the address shown)
+
+3. Fund the deployer address:
+   - For L2s (Base, Optimism, Arbitrum): Send 0.001-0.002 ETH
+   - For Ethereum mainnet: Send 0.01-0.05 ETH
+
+4. Deploy to mainnet:
+   yarn deploy --network <chain>
+   (Enter your password when prompted)
+
+Let me know once you've completed these steps and I can help verify!
+```
+
+### No Purple Gradients (Will Cause Bad UX)
+
+Every frontend you build MUST follow these rules. Purple gradients = "generic AI slop" = users don't trust your app.
+
+**BANNED (Never Use):**
+- `purple`, `violet`, `lavender`, `indigo` - ANY purple-adjacent colors
+- `bg-gradient-*` - ANY gradient backgrounds
+- `backdrop-blur`, `backdrop-filter` - NO glassmorphism
+- `shadow-lg`, `shadow-xl`, `shadow-2xl` - shadows > 4px
+- Glow effects, neon colors, animated color transitions
+
+**REQUIRED (Always Use):**
+- DaisyUI theme: `corporate` (DeFi/Finance) or `dracula` (dev tools)
+- Theme tokens: `bg-base-100`, `bg-base-200`, `bg-base-300`
+- Theme colors: `primary`, `secondary`, `accent` from theme
+- DaisyUI components: `btn`, `card`, `input`, `stats`
+- Shadows: `shadow-sm` or `shadow-md` ONLY
+
+**Design Lint (Check Before EVERY Component):**
 ```
 [ ] No purple/violet/indigo anywhere in the file
 [ ] No bg-gradient-* classes
@@ -34,8 +83,6 @@ Every frontend you build MUST follow these rules. Violation = broken, unprofessi
 [ ] Colors from theme tokens only
 ```
 
-### Why This Matters
-Purple gradients = "generic AI slop" = users don't trust your app.
 Reference sites: Etherscan, GitHub Settings, Stripe Dashboard, GOV.UK.
 
 ---
@@ -607,15 +654,17 @@ Or they can use one of Anvil's pre-funded test accounts:
 - `deploy` component: Deploys to LOCAL fork (not mainnet!)
 - `frontend` component: Connects to local fork
 
-### stack_generateAccount
-- Creates an encrypted deployer account via `yarn generate`
-- User sets encryption password
-- Use this before mainnet deployment
+### stack_generateAccount (INTERACTIVE - Returns Instructions Only)
+- **Does NOT execute `yarn generate`** - returns instructions for user
+- The command requires interactive password input (TTY)
+- Returns step-by-step instructions for user to run manually
+- Use when user is ready to create their deployer account
 
-### stack_checkAccount
-- Shows deployer address and balances via `yarn account`
-- Requires the encryption password
-- Use to verify account is funded before mainnet deploy
+### stack_checkAccount (INTERACTIVE - Returns Instructions Only)
+- **Does NOT execute `yarn account`** - returns instructions for user
+- The command may prompt for keystore password (TTY)
+- Returns step-by-step instructions for user to run manually
+- Use when user needs to see their deployer address
 
 ### stack_configureExternalContracts
 - Configures external contracts for the debug UI
@@ -624,12 +673,31 @@ Or they can use one of Anvil's pre-funded test accounts:
 - Automatically adds entries for both 31337 (fork) and real chainId
 - If ABI not bundled: use Blockscout MCP, search web, or ask user
 
-### Mainnet Deployment
-Not done through eth-mcp tools directly. Guide user to run:
-```bash
-yarn generate     # Create encrypted deployer (if not done)
-yarn account      # Check address and balance
-yarn deploy --network base  # Deploy to real mainnet
+### Mainnet Deployment (USER RUNS MANUALLY)
+
+**IMPORTANT: Mainnet deployment commands are INTERACTIVE and require password input.**
+
+Do NOT try to run these via MCP tools. Instead, guide the user:
+
+```
+These commands require password input, so you'll need to run them yourself:
+
+1. cd /path/to/your/project
+
+2. yarn generate
+   (Set a secure password - remember it!)
+
+3. yarn account  
+   (Copy the deployer address shown)
+
+4. Fund the address with ETH:
+   - L2s (Base, Optimism, Arbitrum): 0.001-0.002 ETH
+   - Ethereum mainnet: 0.01-0.05 ETH
+
+5. yarn deploy --network <chain>
+   (Enter your password when prompted)
+
+Let me know when you're done and I can help verify!
 ```
 
 ---
