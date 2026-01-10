@@ -124,6 +124,17 @@ scaffold-eth-2/
 3. **Frontend pages**: `packages/nextjs/app/yourpage/page.tsx`
 4. **Contract hooks**: Auto-generated, but check `packages/nextjs/contracts/`
 
+### Frontend Anti-Patterns (NEVER DO)
+
+| Anti-Pattern | Why It's Wrong | Correct Approach |
+|--------------|----------------|------------------|
+| Hardcoding contract addresses | Breaks across environments (local vs mainnet) | Use `useDeployedContractInfo("ContractName")` |
+| Raw wagmi hooks for configured contracts | Bypasses scaffold-eth's contract management | Use `useScaffoldReadContract` / `useScaffoldWriteContract` |
+| Re-defining ABIs inline | Redundant, error-prone, hard to maintain | ABIs are already in deployedContracts.ts or externalContracts.ts |
+| Using old hook names (`useScaffoldContractRead`) | Outdated, won't compile | Use `useScaffoldReadContract` / `useScaffoldWriteContract` |
+
+**Both `deployedContracts.ts` AND `externalContracts.ts` work with scaffold-eth hooks.** Once a contract is in either file, always use scaffold-eth hooks.
+
 ---
 
 ## Smart Contract Patterns

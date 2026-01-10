@@ -578,6 +578,90 @@ Now the debug UI shows USDC and Aave Pool alongside the user's vault.
 
 ---
 
+## CRITICAL: Frontend Contract Interaction Rules
+
+### The Golden Rule
+
+**ALL contracts in BOTH `deployedContracts.ts` AND `externalContracts.ts` work with scaffold-eth hooks.**
+
+Once you add a contract to externalContracts.ts, you MUST use scaffold-eth hooks to interact with it:
+
+```tsx
+// CORRECT - Use scaffold-eth hooks for USDC (it's in externalContracts!)
+const { data: balance } = useScaffoldReadContract({
+  contractName: "USDC",
+  functionName: "balanceOf",
+  args: [address],
+});
+
+const { writeContractAsync } = useScaffoldWriteContract("USDC");
+```
+
+### NEVER Do These Things
+
+**1. NEVER hardcode contract addresses in frontend code**
+
+```tsx
+// ❌ WRONG - Hardcoded address
+const VAULT_ADDRESS = "0x058a6bdf12e0c3b5087e8b5990f78aaf437869b2";
+
+// ✅ CORRECT - Dynamic from deployment
+const { data: vaultInfo } = useDeployedContractInfo("YieldRedirectVault");
+const vaultAddress = vaultInfo?.address;
+```
+
+**2. NEVER use raw wagmi hooks for contracts in deployedContracts or externalContracts**
+
+```tsx
+// ❌ WRONG - Raw wagmi hooks
+import { useReadContract, useWriteContract } from "wagmi";
+const { data } = useReadContract({
+  address: "0x...",  // hardcoded!
+  abi: ERC20_ABI,    // redundant!
+  functionName: "balanceOf",
+});
+
+// ✅ CORRECT - Scaffold-eth hooks work for externalContracts too!
+const { data } = useScaffoldReadContract({
+  contractName: "USDC",  // Name from externalContracts.ts
+  functionName: "balanceOf",
+  args: [address],
+});
+```
+
+**3. NEVER re-define ABIs that already exist in deployedContracts or externalContracts**
+
+```tsx
+// ❌ WRONG - Redundant ABI definition
+const ERC20_ABI = [{ name: "approve", ... }] as const;
+
+// ✅ CORRECT - The ABI is already in externalContracts.ts, just use the hook
+const { writeContractAsync } = useScaffoldWriteContract("USDC");
+```
+
+**4. NEVER use old hook names**
+
+```tsx
+// ❌ WRONG - Old hook names (these don't exist anymore!)
+useScaffoldContractRead   // OLD - DO NOT USE
+useScaffoldContractWrite  // OLD - DO NOT USE
+
+// ✅ CORRECT - Current hook names
+useScaffoldReadContract   // ALWAYS use this
+useScaffoldWriteContract  // ALWAYS use this
+```
+
+### Why This Matters
+
+Hardcoded addresses create bugs that **only appear in production**:
+- Local fork uses address `0xabc...`
+- Mainnet deployment uses address `0xdef...`
+- Frontend still points to `0xabc...` → **App is broken**
+
+Using `useDeployedContractInfo` and scaffold-eth hooks ensures addresses update automatically across environments.
+
+---
+
 ## CRITICAL: Funding Test Wallets with Tokens on Forks
 
 When building apps that need tokens (USDC vaults, swap interfaces, etc.), the user's connected wallet needs those tokens to test. Use Anvil's impersonation feature to transfer tokens from protocol "whale" addresses.

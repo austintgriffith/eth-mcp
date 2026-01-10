@@ -19,7 +19,7 @@
 
 import React, { useState, useEffect } from "react";
 // These imports would come from scaffold-eth-2
-// import { useScaffoldContractRead, useScaffoldContractWrite } from "~~/hooks/scaffold-eth";
+// import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 // import { useAccount } from "wagmi";
 
 interface SwapUIProps {

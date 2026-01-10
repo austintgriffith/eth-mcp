@@ -206,6 +206,18 @@ Deploys to REAL mainnet:
 - Costs real gas
 - But you're confident it works!
 
+### Step 8: Verify Contracts (Recommended)
+
+```bash
+yarn verify --network base
+```
+
+Verifies your contracts on the block explorer (Basescan, Etherscan, etc.):
+- Makes your contract source code publicly readable
+- Enables users to interact with your contract directly on the explorer
+- Builds trust by showing your code is open
+- Runs automatically - no interaction needed
+
 ---
 
 ## SECURITY: Why Encrypted Deployers?
@@ -243,6 +255,7 @@ Encrypted keystores require your password to use.
 | `yarn deploy --network base` | Deploy to real Base mainnet | **YES** - User must run |
 | `yarn deploy --network mainnet` | Deploy to real Ethereum mainnet | **YES** - User must run |
 | `yarn deploy --network optimism` | Deploy to real Optimism mainnet | **YES** - User must run |
+| `yarn verify --network base` | Verify contracts on block explorer | No - AI can run |
 
 **Interactive commands** require password input and will HANG if run by AI tools.
 

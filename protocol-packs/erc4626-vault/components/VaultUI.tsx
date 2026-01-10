@@ -15,8 +15,8 @@ import { useState } from "react";
 import { formatUnits, parseUnits } from "viem";
 import { useAccount, useBalance } from "wagmi";
 import {
-  useScaffoldContractRead,
-  useScaffoldContractWrite,
+  useScaffoldReadContract,
+  useScaffoldWriteContract,
 } from "~~/hooks/scaffold-eth";
 
 interface VaultUIProps {
@@ -36,35 +36,35 @@ export default function VaultUI({
   const [activeTab, setActiveTab] = useState<"deposit" | "withdraw">("deposit");
 
   // Read vault data
-  const { data: totalAssets } = useScaffoldContractRead({
+  const { data: totalAssets } = useScaffoldReadContract({
     contractName: vaultName,
     functionName: "totalAssets",
   });
 
-  const { data: totalSupply } = useScaffoldContractRead({
+  const { data: totalSupply } = useScaffoldReadContract({
     contractName: vaultName,
     functionName: "totalSupply",
   });
 
-  const { data: userShares } = useScaffoldContractRead({
+  const { data: userShares } = useScaffoldReadContract({
     contractName: vaultName,
     functionName: "balanceOf",
     args: [address],
   });
 
-  const { data: userAssetValue } = useScaffoldContractRead({
+  const { data: userAssetValue } = useScaffoldReadContract({
     contractName: vaultName,
     functionName: "convertToAssets",
     args: [userShares || 0n],
   });
 
-  const { data: previewDepositShares } = useScaffoldContractRead({
+  const { data: previewDepositShares } = useScaffoldReadContract({
     contractName: vaultName,
     functionName: "previewDeposit",
     args: [depositAmount ? parseUnits(depositAmount, assetDecimals) : 0n],
   });
 
-  const { data: previewWithdrawShares } = useScaffoldContractRead({
+  const { data: previewWithdrawShares } = useScaffoldReadContract({
     contractName: vaultName,
     functionName: "previewWithdraw",
     args: [withdrawAmount ? parseUnits(withdrawAmount, assetDecimals) : 0n],
@@ -72,7 +72,7 @@ export default function VaultUI({
 
   // Write functions
   const { writeAsync: deposit, isLoading: isDepositing } =
-    useScaffoldContractWrite({
+    useScaffoldWriteContract({
       contractName: vaultName,
       functionName: "deposit",
       args: [
@@ -82,7 +82,7 @@ export default function VaultUI({
     });
 
   const { writeAsync: withdraw, isLoading: isWithdrawing } =
-    useScaffoldContractWrite({
+    useScaffoldWriteContract({
       contractName: vaultName,
       functionName: "withdraw",
       args: [

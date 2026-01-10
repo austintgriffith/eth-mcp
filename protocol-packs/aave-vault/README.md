@@ -154,7 +154,7 @@ stack_start({ components: ["fork", "deploy", "frontend"] })
 
 ```tsx
 // Check current APY
-const { data: apyPercent } = useScaffoldContractRead({
+const { data: apyPercent } = useScaffoldReadContract({
   contractName: "AaveVault",
   functionName: "getAPYPercent",
 });

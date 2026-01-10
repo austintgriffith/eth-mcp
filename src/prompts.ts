@@ -203,13 +203,16 @@ When the user has finished testing on the fork and wants to deploy to mainnet, p
 > # Step 4: Deploy to mainnet
 > yarn deploy --network [chain]
 > # Enter your password when prompted
+> 
+> # Step 5: Verify your contracts on the block explorer
+> yarn verify --network [chain]
 > \`\`\`
 > 
 > **Funding amounts:**
 > - L2s (Base, Optimism, Arbitrum): 0.001-0.002 ETH
 > - Ethereum mainnet: 0.01-0.05 ETH
 > 
-> Let me know when you're done and I can help verify the deployment!"
+> Let me know when you're done!"
 
 ## Why NOT Testnets?
 

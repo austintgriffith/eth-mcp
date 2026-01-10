@@ -130,10 +130,10 @@ contract DeployScript is ScaffoldETHDeploy {
 ### Reading Contract State
 
 ```tsx
-import { useScaffoldContractRead } from "~~/hooks/scaffold-eth";
+import { useScaffoldReadContract } from "~~/hooks/scaffold-eth";
 
 function MyComponent() {
-  const { data: greeting } = useScaffoldContractRead({
+  const { data: greeting } = useScaffoldReadContract({
     contractName: "YourContract",
     functionName: "greeting",
   });
@@ -145,10 +145,10 @@ function MyComponent() {
 ### Writing to Contract
 
 ```tsx
-import { useScaffoldContractWrite } from "~~/hooks/scaffold-eth";
+import { useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 
 function MyComponent() {
-  const { writeAsync: setGreeting, isLoading } = useScaffoldContractWrite({
+  const { writeAsync: setGreeting, isLoading } = useScaffoldWriteContract({
     contractName: "YourContract",
     functionName: "setGreeting",
     args: ["New greeting!"],
@@ -195,6 +195,30 @@ function MyComponent() {
   return <div>Contract: {contractInfo?.address}</div>;
 }
 ```
+
+### External Contracts (USDC, Aave, etc.)
+
+Contracts added to `externalContracts.ts` work **exactly like** deployed contracts with scaffold-eth hooks:
+
+```tsx
+// USDC is in externalContracts.ts - use scaffold-eth hooks!
+const { data: balance } = useScaffoldReadContract({
+  contractName: "USDC",
+  functionName: "balanceOf",
+  args: [address],
+});
+
+const { writeContractAsync: writeUSDC } = useScaffoldWriteContract("USDC");
+
+// Approve vault to spend USDC - get vault address dynamically!
+const { data: vaultInfo } = useDeployedContractInfo("YieldRedirectVault");
+await writeUSDC({
+  functionName: "approve",
+  args: [vaultInfo?.address, amount],
+});
+```
+
+**NEVER use raw wagmi hooks (`useReadContract`, `useWriteContract`) for contracts in externalContracts.ts. NEVER hardcode addresses.**
 
 ---
 
