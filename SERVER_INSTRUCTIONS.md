@@ -2,6 +2,44 @@
 
 These instructions guide AI agents on how to use eth-mcp correctly.
 
+---
+
+## ⚠️ MANDATORY RULE #1: NO PURPLE GRADIENTS
+
+**READ THIS BEFORE WRITING ANY FRONTEND CODE.**
+
+Every frontend you build MUST follow these rules. Violation = broken, unprofessional app.
+
+### BANNED (Never Use)
+- ❌ `purple`, `violet`, `lavender`, `indigo` - ANY purple-adjacent colors
+- ❌ `bg-gradient-*` - ANY gradient backgrounds
+- ❌ `backdrop-blur`, `backdrop-filter` - NO glassmorphism
+- ❌ `shadow-lg`, `shadow-xl`, `shadow-2xl` - shadows > 4px
+- ❌ Glow effects, neon colors, animated color transitions
+
+### REQUIRED (Always Use)
+- ✅ DaisyUI theme: `corporate` (DeFi/Finance) or `dracula` (dev tools)
+- ✅ Theme tokens: `bg-base-100`, `bg-base-200`, `bg-base-300`
+- ✅ Theme colors: `primary`, `secondary`, `accent` from theme
+- ✅ DaisyUI components: `btn`, `card`, `input`, `stats`
+- ✅ Shadows: `shadow-sm` or `shadow-md` ONLY
+
+### Design Lint (Check Before EVERY Component)
+```
+[ ] No purple/violet/indigo anywhere in the file
+[ ] No bg-gradient-* classes
+[ ] No backdrop-blur or glassmorphism
+[ ] Shadows are shadow-sm or shadow-md max
+[ ] Using DaisyUI components (btn, card, input)
+[ ] Colors from theme tokens only
+```
+
+### Why This Matters
+Purple gradients = "generic AI slop" = users don't trust your app.
+Reference sites: Etherscan, GitHub Settings, Stripe Dashboard, GOV.UK.
+
+---
+
 ## CRITICAL: Scaffold-ETH 2 Patterns
 
 **ALWAYS use SE2's custom hooks and components. NEVER use raw wagmi hooks for contract interaction.**

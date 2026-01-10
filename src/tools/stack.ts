@@ -626,6 +626,27 @@ You can start multiple components at once. Order matters: fork should start befo
       }
 
       const allSuccess = Object.values(results).every((r) => r.success);
+      
+      // Inject frontend design rules when frontend component is started
+      const frontendStarted = args.components.includes("frontend") && results.frontend?.success;
+      const frontendDesignRules = frontendStarted ? {
+        FRONTEND_DESIGN_RULES: {
+          CRITICAL: "NEVER use purple/pink/indigo gradients. This is MANDATORY.",
+          theme: "Use DaisyUI theme: 'corporate' for DeFi/Finance, 'dracula' for dev tools",
+          colors: "Use ONLY theme tokens: base-100, base-200, base-300, primary, secondary, accent",
+          banned: [
+            "purple, violet, lavender, indigo colors",
+            "bg-gradient-* classes",
+            "backdrop-blur, glassmorphism",
+            "shadow-lg, shadow-xl, shadow-2xl (max is shadow-md)",
+            "glow effects"
+          ],
+          components: "Use DaisyUI: btn, card, input, stats - NOT custom gradient styles",
+          reference: "Design like Etherscan, GitHub Settings, Stripe Dashboard - NOT like SaaS marketing sites",
+          lint_before_writing: "Before ANY .tsx file: verify no purple, no gradients, using DaisyUI components"
+        }
+      } : {};
+
       return {
         success: allSuccess,
         results,
@@ -633,6 +654,7 @@ You can start multiple components at once. Order matters: fork should start befo
         message: allSuccess
           ? "All components started successfully"
           : "Some components failed to start",
+        ...frontendDesignRules,
       };
     },
   },
