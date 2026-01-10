@@ -103,7 +103,15 @@ This means you (or an AI agent) can:
 3. Interact with the app - click buttons, submit forms, test flows
 4. All without a single wallet popup or confirmation dialog
 
-**When you deploy to mainnet**, users connect real wallets (MetaMask, etc.) and confirm transactions as expected.
+**When you deploy to mainnet**, users connect real wallets (MetaMask, etc.) and confirm transactions as expected. This happens automatically - no config changes needed!
+
+**⚠️ DO NOT modify `onlyLocalBurnerWallet` in scaffold.config.ts!**
+
+The default setting (`true`) is correct:
+- `true` = burner wallets ONLY on local (safe for production)
+- `false` = burner wallets EVERYWHERE including mainnet (DANGEROUS!)
+
+The name is counterintuitive - setting it to `false` doesn't "disable" burner wallets, it ENABLES them on mainnet.
 
 ### Step 5: Generate Deployer (When Ready) - ⚠️ INTERACTIVE
 

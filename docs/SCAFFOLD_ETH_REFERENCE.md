@@ -317,12 +317,26 @@ export const scaffoldConfig = {
 
 ### Burner Wallet (Local Development)
 
-The `onlyLocalBurnerWallet: true` setting enables frictionless testing:
+**DO NOT CHANGE THIS SETTING.** Scaffold-ETH handles this automatically.
 
-- **On local fork (chainId 31337)**: Auto-connected burner wallet, no popups
+```typescript
+onlyLocalBurnerWallet: true,  // DEFAULT - DO NOT CHANGE
+```
+
+| Setting | What It Means | When Burner Wallets Are Available |
+|---------|---------------|-----------------------------------|
+| `true` (default) | Burner wallets ONLY on local networks | Local fork only (safe for production) |
+| `false` | Burner wallets EVERYWHERE | Including mainnet (DANGEROUS!) |
+
+**The name is counterintuitive!** Setting it to `false` does NOT "disable" burner wallets - it ENABLES them on mainnet, which would let anyone use your app without a real wallet.
+
+**What happens automatically:**
+- **On local fork (chainId 31337)**: Auto-connected burner wallet, no popups, fund from faucet
 - **On mainnet**: Real wallet connection required (MetaMask, etc.)
 
 This lets you test the entire app flow locally without any wallet friction, then seamlessly transition to real wallet UX on mainnet. AI agents can use browser automation to click through the app, fund the burner wallet from the faucet, and test all user flows without any wallet extension or confirmation dialogs.
+
+**NEVER set `onlyLocalBurnerWallet: false`** - Scaffold-ETH's default is correct.
 
 ### foundry.toml
 

@@ -429,6 +429,26 @@ Only use testnets if user insists after this explanation.
 
 **On local forks, the frontend uses burner wallets - enabling fully automated UI testing.**
 
+### DO NOT MODIFY `onlyLocalBurnerWallet`
+
+Scaffold-ETH automatically handles this. **NEVER change this setting:**
+
+```typescript
+// scaffold.config.ts - DO NOT CHANGE THIS LINE
+onlyLocalBurnerWallet: true,  // DEFAULT - LEAVE IT ALONE
+```
+
+| Setting | What It Actually Means |
+|---------|------------------------|
+| `true` (default) | Burner wallets ONLY on local networks (SAFE) |
+| `false` | Burner wallets EVERYWHERE including mainnet (DANGEROUS!) |
+
+**The name is counterintuitive!** If you think "I need to disable burner wallets for production" and set it to `false`, you've done the OPPOSITE - you've ENABLED burner wallets on mainnet.
+
+**Scaffold-ETH's default (`true`) is correct.** It automatically:
+- Enables burner wallets on local fork (chainId 31337)
+- Requires real wallets on mainnet
+
 ### What This Means for AI Agents
 
 When testing via browser automation (e.g., cursor-browser-extension MCP):
@@ -453,6 +473,7 @@ When connected to real mainnet (not a fork):
 - Users must connect a real wallet (MetaMask, Rainbow, etc.)
 - Transactions require user confirmation
 - This is the expected production behavior
+- **This happens automatically** - no config changes needed!
 
 ### Testing Workflow Example
 
