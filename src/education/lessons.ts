@@ -125,16 +125,19 @@ uint256 fee = 0.001 ether;`,
     id: "approvals",
     category: "tokens",
     question: "How are you handling token approvals? Does the user need to approve before your contract can transfer?",
-    short: "ERC-20 transfers require prior approval. Check allowance or use permit.",
+    short: "ERC-20 transfers require prior approval. NEVER use infinite approvals - approve exact amounts only!",
     explanation: `Before your contract can transfer tokens FROM a user, that user must approve your contract:
 
 1. User calls token.approve(yourContract, amount)
 2. Then your contract can call token.transferFrom(user, ..., amount)
 
-Common patterns:
-- Infinite approval: approve(contract, type(uint256).max) - saves gas on future txs
-- Exact approval: approve(contract, exactAmount) - safer, but extra tx each time
-- Permit (EIP-2612): Gasless approval via signature - best UX
+**SECURITY: Always approve exact amounts, NEVER infinite!**
+
+- Exact approval: approve(contract, exactAmount) - RECOMMENDED, limits risk
+- Permit (EIP-2612): Gasless approval via signature - best UX, still use exact amounts
+- Infinite approval: approve(contract, type(uint256).max) - DANGEROUS! If contract is exploited, attacker drains ALL user tokens, not just what they deposited
+
+The extra approval transaction is worth it. One click vs losing everything.
 
 Always check the transfer succeeded - some tokens don't revert on failure!`,
     wrongExample: `// WRONG: Assuming approval exists
@@ -168,8 +171,8 @@ function depositWithPermit(
     );
     token.safeTransferFrom(msg.sender, address(this), amount);
 }`,
-    severity: "high",
-    keywords: ["approve", "allowance", "transferFrom", "permit", "erc20"],
+    severity: "critical",
+    keywords: ["approve", "allowance", "transferFrom", "permit", "erc20", "infinite", "max"],
     relatedDocs: ["docs/SOLIDITY_PATTERNS.md"],
   },
 
@@ -319,7 +322,9 @@ For every function, ask:
 - WHY would they pay gas to call it?
 - WHAT do they get in return?
 
-If there's no good answer, your function won't get called.`,
+If there's no good answer, your function won't get called.
+
+**The Decentralization Pattern:** Want a truly decentralized system that runs forever? Make the function callable by ANYONE and give them a reward for calling it. MEV bots, keepers, and arbitrageurs will compete to call it 24/7. No admin needed, no centralized server, no single point of failure - just pure incentives running the system forever.`,
     wrongExample: `// PROBLEMATIC: Who calls this? Why?
 function distributeRewards() external {
     for (uint i = 0; i < stakers.length; i++) {

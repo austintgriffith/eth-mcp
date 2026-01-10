@@ -235,6 +235,54 @@ Always use ReentrancyGuard for functions that:
 
 ---
 
+## Web3 Integration Gotchas
+
+Critical pitfalls when building DeFi frontends.
+
+### 1. ERC20 Approve Before Transfer
+
+Any contract using `transferFrom()` requires prior approval. This includes vaults, staking, DEXs - anything that pulls tokens from users.
+
+```
+User → token.approve(vault, amount)
+User → vault.deposit(amount) → vault calls transferFrom ✓
+```
+
+**Frontend:** Check allowance, show "Approve" button if needed, then "Deposit".
+
+### 2. NEVER Use Infinite Approvals
+
+```tsx
+// ❌ BAD - If vault is exploited, attacker drains ALL user's tokens
+approve(vaultAddress, maxUint256)
+
+// ✅ GOOD - Only approve what's needed
+approve(vaultAddress, depositAmount)
+```
+
+If the contract is compromised, attackers can only take what was approved. One extra click beats losing everything.
+
+### 3. Token Decimals Vary
+
+| Token | Decimals | 1.00 = |
+|-------|----------|--------|
+| ETH, WETH, DAI | 18 | 1e18 |
+| USDC, USDT | 6 | 1e6 |
+| WBTC | 8 | 1e8 |
+
+Always use `parseUnits(amount, decimals)` and `formatUnits(value, decimals)`.
+
+### 4. Nothing Is Automatic
+
+The blockchain doesn't push - you must poke it:
+- Yield doesn't auto-compound → someone calls `harvest()`
+- Rewards don't auto-claim → user calls `claim()`
+- Time-locks don't auto-release → user calls `withdraw()`
+
+**The Decentralization Pattern:** Make functions callable by ANYONE with a reward. MEV bots and keepers compete to call it 24/7. No admin, runs forever.
+
+---
+
 ## Gas Optimization Basics
 
 1. **Storage is expensive** - 20,000 gas to write, 2,100 to read

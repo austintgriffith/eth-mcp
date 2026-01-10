@@ -19,6 +19,39 @@ eth-mcp helps users build decentralized applications on Ethereum and EVM-compati
 
 These issues will cause problems if ignored. Read this section before starting any project.
 
+### 🚨 RPC Configuration (PRODUCTION WILL FAIL WITHOUT THIS!)
+
+**For Base, Optimism, Arbitrum, Polygon: Public RPCs fail with 429 rate limit errors!**
+
+| Chain | Public RPC | Production Status |
+|-------|-----------|-------------------|
+| **Ethereum** | mainnet.rpc.buidlguidl.com | ✅ Works - FREE BuidlGuidl RPC |
+| **Base** | mainnet.base.org | ❌ FAILS - 429 errors immediately |
+| **Optimism** | mainnet.optimism.io | ❌ FAILS - 429 errors immediately |
+| **Arbitrum** | arb1.arbitrum.io/rpc | ❌ FAILS - 429 errors immediately |
+| **Polygon** | polygon-rpc.com | ❌ FAILS - 429 errors immediately |
+
+**Before deploying to ANY non-Ethereum chain, user MUST:**
+
+1. Get a FREE API key from https://alchemy.com
+2. Add to `packages/nextjs/.env.local`:
+   ```
+   NEXT_PUBLIC_ALCHEMY_API_KEY=your_actual_key_here
+   ```
+3. For Vercel/production hosting: Add `NEXT_PUBLIC_ALCHEMY_API_KEY` to environment variables
+
+**If user skips this step**, their production app will show `POST https://mainnet.base.org/ 429 (Too Many Requests)` errors and be completely unusable.
+
+**When to remind user about RPC:**
+- When `stack_start` runs with frontend on a non-Ethereum chain
+- When user asks about mainnet deployment
+- When `stack_generateAccount` is called
+- ALWAYS before they deploy frontend to production
+
+**Use `stack_checkProductionReadiness` to verify RPC configuration before deployment.**
+
+---
+
 ### Interactive Commands (Will Cause Hanging)
 
 Some commands require interactive password input and CANNOT be run by AI tools. They will HANG if you try to run them via MCP tools:
@@ -35,22 +68,30 @@ Some commands require interactive password input and CANNOT be run by AI tools. 
 To deploy to mainnet, you'll need to run a few commands manually 
 (they require password input that I can't provide):
 
-1. Create your encrypted deployer account:
+1. CRITICAL - Configure RPC (for Base/Optimism/Arbitrum/Polygon ONLY):
+   Get a FREE API key from https://alchemy.com
+   Add to packages/nextjs/.env.local:
+   NEXT_PUBLIC_ALCHEMY_API_KEY=your_key_here
+   (Also add to Vercel env vars for production!)
+
+2. Create your encrypted deployer account:
    cd /path/to/project
    yarn generate
    (Enter a secure password - REMEMBER IT!)
 
-2. Check your deployer address:
+3. Check your deployer address:
    yarn account
    (Copy the address shown)
 
-3. Fund the deployer address:
+4. Fund the deployer address:
    - For L2s (Base, Optimism, Arbitrum): Send 0.001-0.002 ETH
    - For Ethereum mainnet: Send 0.01-0.05 ETH
 
-4. Deploy to mainnet:
+5. Deploy contracts to mainnet:
    yarn deploy --network <chain>
    (Enter your password when prompted)
+
+⚠️  If you skip step 1, your production frontend WILL show 429 errors!
 
 Let me know once you've completed these steps and I can help verify!
 ```

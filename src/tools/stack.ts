@@ -653,6 +653,31 @@ You can start multiple components at once. Order matters: fork should start befo
         }
       } : {};
 
+      // CRITICAL RPC WARNING for non-Ethereum chains
+      // Chains that need custom RPC: Base (8453), Optimism (10), Arbitrum (42161), Polygon (137)
+      // Chains that are fine: localhost (31337), Ethereum mainnet (1 - has BuidlGuidl RPC)
+      const chain = state.config?.chain?.toLowerCase() || "";
+      const chainId = state.config?.chainId || 31337;
+      const needsCustomRpc = frontendStarted && 
+        chainId !== 31337 && // Not localhost
+        chainId !== 1 && // Not Ethereum mainnet (has BuidlGuidl RPC)
+        ["base", "optimism", "arbitrum", "polygon"].includes(chain);
+      
+      const rpcWarning = needsCustomRpc ? {
+        CRITICAL_RPC_WARNING: {
+          severity: "CRITICAL",
+          message: `Your frontend is configured for ${chain.charAt(0).toUpperCase() + chain.slice(1)} mainnet (chainId ${chainId}). Public RPCs like mainnet.base.org WILL FAIL with 429 errors in production!`,
+          action: "Before deploying to Vercel/production, you MUST set NEXT_PUBLIC_ALCHEMY_API_KEY",
+          steps: [
+            "1. Get a FREE API key from https://alchemy.com",
+            "2. For local dev: Add to packages/nextjs/.env.local: NEXT_PUBLIC_ALCHEMY_API_KEY=your_key",
+            "3. For production: Add NEXT_PUBLIC_ALCHEMY_API_KEY to your Vercel/hosting environment variables"
+          ],
+          consequence: "Without this, your production app will show 429 (Too Many Requests) errors and be unusable",
+          alchemyUrl: "https://alchemy.com"
+        }
+      } : {};
+
       return {
         success: allSuccess,
         results,
@@ -661,6 +686,7 @@ You can start multiple components at once. Order matters: fork should start befo
           ? "All components started successfully"
           : "Some components failed to start",
         ...frontendDesignRules,
+        ...rpcWarning,
       };
     },
   },
@@ -754,11 +780,25 @@ This tool returns step-by-step instructions for the user to run in their termina
       // Get chain from state to provide chain-specific funding guidance
       const chain = state.config?.chain || "unknown";
       const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
+      const needsCustomRpc = ["base", "optimism", "arbitrum", "polygon"].includes(chain.toLowerCase());
       const fundingAmount = isL2 
         ? "0.001-0.002 ETH (L2s are cheap - deployments cost <$1!)"
         : chain === "mainnet" 
           ? "0.01-0.05 ETH (mainnet is expensive - $20-100)"
           : "appropriate ETH for your chain (L2s: ~0.001 ETH, mainnet: ~0.01-0.05 ETH)";
+
+      // Build RPC configuration instructions for L2s
+      const rpcInstructions = needsCustomRpc ? [
+        ``,
+        `⚠️  CRITICAL: Configure RPC for ${chain.charAt(0).toUpperCase() + chain.slice(1)} (REQUIRED!)`,
+        `   Public RPCs like mainnet.base.org WILL FAIL with 429 errors in production.`,
+        ``,
+        `   a. Get a FREE API key from https://alchemy.com`,
+        `   b. Add to packages/nextjs/.env.local:`,
+        `      NEXT_PUBLIC_ALCHEMY_API_KEY=your_alchemy_key`,
+        `   c. For Vercel/production: Add the same env var in your hosting dashboard`,
+        ``,
+      ] : [];
 
       // Return instructions instead of executing
       return {
@@ -766,10 +806,23 @@ This tool returns step-by-step instructions for the user to run in their termina
         requiresUserAction: true,
         message: "INTERACTIVE COMMAND - User must run manually",
         reason: "yarn generate prompts for a password, which requires terminal input. AI tools cannot provide interactive input.",
+        ...(needsCustomRpc ? {
+          CRITICAL_RPC_PREREQUISITE: {
+            message: `BEFORE deploying to ${chain}, you MUST configure your RPC endpoint`,
+            problem: "Public RPCs (mainnet.base.org) will fail with 429 rate limit errors in production",
+            solution: [
+              "1. Get a FREE API key from https://alchemy.com",
+              "2. Add to packages/nextjs/.env.local: NEXT_PUBLIC_ALCHEMY_API_KEY=your_key",
+              "3. Add to packages/foundry/.env: FORK_URL=https://" + chain + "-mainnet.g.alchemy.com/v2/your_key",
+              "4. For production hosting (Vercel): Add NEXT_PUBLIC_ALCHEMY_API_KEY to environment variables"
+            ],
+            alchemySignup: "https://alchemy.com",
+          },
+        } : {}),
         userInstructions: [
           `1. Open a terminal in your project directory:`,
           `   cd ${state.workspacePath}`,
-          ``,
+          ...rpcInstructions,
           `2. Run the generate command:`,
           `   yarn generate`,
           ``,
@@ -787,9 +840,12 @@ This tool returns step-by-step instructions for the user to run in their termina
         ],
         copyPasteCommands: {
           step1_cd: `cd ${state.workspacePath}`,
-          step2_generate: "yarn generate",
-          step3_account: "yarn account",
-          step4_deploy: `yarn deploy --network ${chain}`,
+          ...(needsCustomRpc ? {
+            step2_env_local: `echo 'NEXT_PUBLIC_ALCHEMY_API_KEY=your_alchemy_key_here' >> ${state.workspacePath}/packages/nextjs/.env.local`,
+          } : {}),
+          step3_generate: "yarn generate",
+          step4_account: "yarn account",
+          step5_deploy: `yarn deploy --network ${chain}`,
         },
       };
     },
@@ -828,6 +884,7 @@ This tool returns step-by-step instructions for the user to run in their termina
       // Get chain from state to provide chain-specific funding guidance
       const chain = state.config?.chain || "unknown";
       const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
+      const needsCustomRpc = ["base", "optimism", "arbitrum", "polygon"].includes(chain.toLowerCase());
       const fundingAmount = isL2 
         ? "0.001-0.002 ETH (L2s are cheap - deployments cost <$1!)"
         : chain === "mainnet" 
@@ -840,6 +897,14 @@ This tool returns step-by-step instructions for the user to run in their termina
         requiresUserAction: true,
         message: "INTERACTIVE COMMAND - User must run manually",
         reason: "yarn account may prompt for the keystore password, which requires terminal input. AI tools cannot provide interactive input.",
+        ...(needsCustomRpc ? {
+          CRITICAL_RPC_REMINDER: {
+            message: `Don't forget to configure RPC for ${chain.charAt(0).toUpperCase() + chain.slice(1)} before deploying!`,
+            problem: "Public RPCs will fail with 429 rate limit errors in production",
+            action: "Set NEXT_PUBLIC_ALCHEMY_API_KEY in .env.local and Vercel env vars",
+            alchemySignup: "https://alchemy.com (free tier available)",
+          },
+        } : {}),
         userInstructions: [
           `1. Open a terminal in your project directory:`,
           `   cd ${state.workspacePath}`,
@@ -853,7 +918,14 @@ This tool returns step-by-step instructions for the user to run in their termina
           ``,
           `5. Fund the deployer address with ${fundingAmount}`,
           ``,
-          `6. Once funded, deploy to mainnet:`,
+          ...(needsCustomRpc ? [
+            `6. IMPORTANT: Configure RPC before deploying frontend!`,
+            `   - Get FREE key from https://alchemy.com`,
+            `   - Add to .env.local: NEXT_PUBLIC_ALCHEMY_API_KEY=your_key`,
+            `   - Add to Vercel env vars for production`,
+            ``,
+          ] : []),
+          `${needsCustomRpc ? "7" : "6"}. Once funded, deploy to mainnet:`,
           `   yarn deploy --network ${chain}`,
         ],
         copyPasteCommands: {
@@ -1112,6 +1184,202 @@ Then call this tool again with the abi parameter.`;
       }
 
       return response;
+    },
+  },
+
+  /**
+   * stack.checkProductionReadiness - Verify RPC and env configuration before production deployment
+   */
+  checkProductionReadiness: {
+    name: "stack_checkProductionReadiness",
+    description: `Check if the project is ready for production deployment.
+
+CRITICAL: Call this BEFORE deploying to Vercel or any production hosting.
+
+This tool verifies:
+1. RPC Configuration - Checks if NEXT_PUBLIC_ALCHEMY_API_KEY is set (required for non-Ethereum chains)
+2. Environment files - Checks if .env.local exists with required variables
+3. Chain compatibility - Warns about chains that need custom RPC
+
+For chains like Base, Optimism, Arbitrum, Polygon:
+- Public RPCs (mainnet.base.org) WILL fail with 429 rate limits in production
+- You MUST set up your own RPC via Alchemy (free tier available)
+
+Returns a pass/fail checklist with specific instructions for any failed items.`,
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+    handler: async () => {
+      const state = stateManager.getState();
+
+      if (!state.initialized || !state.workspacePath) {
+        return { success: false, error: "Stack not initialized. Run stack_init first." };
+      }
+
+      const chain = state.config?.chain?.toLowerCase() || "";
+      const chainId = state.config?.chainId || 31337;
+      
+      // Chains that need custom RPC (public RPCs fail with 429)
+      const chainsNeedingCustomRpc = ["base", "optimism", "arbitrum", "polygon"];
+      const needsCustomRpc = chainsNeedingCustomRpc.includes(chain);
+      
+      // Default Alchemy key from Scaffold-ETH (truncated, rate-limited)
+      const DEFAULT_ALCHEMY_KEY = "cR4WnXePioePZ5fFrnSiR";
+      
+      const checks: Array<{
+        name: string;
+        status: "pass" | "fail" | "warning";
+        message: string;
+        action?: string;
+      }> = [];
+
+      // Check 1: .env.local exists
+      const envLocalPath = path.join(state.workspacePath, "packages", "nextjs", ".env.local");
+      let envLocalContent = "";
+      let envLocalExists = false;
+      try {
+        envLocalContent = await fs.readFile(envLocalPath, "utf-8");
+        envLocalExists = true;
+        checks.push({
+          name: "Environment File",
+          status: "pass",
+          message: ".env.local exists",
+        });
+      } catch {
+        checks.push({
+          name: "Environment File",
+          status: needsCustomRpc ? "fail" : "warning",
+          message: ".env.local does not exist",
+          action: `Create packages/nextjs/.env.local (copy from .env.example)`,
+        });
+      }
+
+      // Check 2: NEXT_PUBLIC_ALCHEMY_API_KEY is set and not the default
+      if (needsCustomRpc) {
+        const alchemyKeyMatch = envLocalContent.match(/NEXT_PUBLIC_ALCHEMY_API_KEY\s*=\s*([^\s\n]+)/);
+        const alchemyKey = alchemyKeyMatch?.[1];
+        
+        if (!alchemyKey || alchemyKey === DEFAULT_ALCHEMY_KEY) {
+          checks.push({
+            name: "Alchemy RPC Key",
+            status: "fail",
+            message: alchemyKey 
+              ? "Using default Alchemy key (rate-limited, will cause 429 errors)"
+              : "NEXT_PUBLIC_ALCHEMY_API_KEY not set",
+            action: [
+              "1. Get a FREE API key from https://alchemy.com",
+              "2. Add to packages/nextjs/.env.local:",
+              "   NEXT_PUBLIC_ALCHEMY_API_KEY=your_actual_key_here",
+              "3. For production: Add the same key to Vercel environment variables"
+            ].join("\n"),
+          });
+        } else {
+          checks.push({
+            name: "Alchemy RPC Key",
+            status: "pass",
+            message: "Custom Alchemy API key is configured",
+          });
+        }
+      } else if (chain === "mainnet" || chainId === 1) {
+        checks.push({
+          name: "Alchemy RPC Key",
+          status: "pass",
+          message: "Ethereum mainnet uses BuidlGuidl RPC by default (no custom key needed)",
+        });
+      } else {
+        checks.push({
+          name: "Alchemy RPC Key",
+          status: "pass",
+          message: "Local development (chainId 31337) - no custom RPC needed",
+        });
+      }
+
+      // Check 3: scaffold.config.ts targetNetworks
+      const scaffoldConfigPath = path.join(state.workspacePath, "packages", "nextjs", "scaffold.config.ts");
+      try {
+        const configContent = await fs.readFile(scaffoldConfigPath, "utf-8");
+        const targetNetworksMatch = configContent.match(/targetNetworks:\s*\[([^\]]+)\]/);
+        if (targetNetworksMatch) {
+          const networks = targetNetworksMatch[1];
+          const isLocalOnly = networks.includes("foundry") || networks.includes("hardhat") || networks.includes("31337");
+          const hasMainnet = networks.includes("chains.base") || networks.includes("chains.optimism") || 
+                           networks.includes("chains.arbitrum") || networks.includes("chains.polygon") ||
+                           networks.includes("chains.mainnet");
+          
+          if (isLocalOnly) {
+            checks.push({
+              name: "Target Networks",
+              status: "warning",
+              message: "Currently targeting local network (foundry/hardhat)",
+              action: "For production, update targetNetworks in scaffold.config.ts to your production chain",
+            });
+          } else if (hasMainnet) {
+            checks.push({
+              name: "Target Networks",
+              status: "pass",
+              message: `Configured for production chain: ${networks.trim()}`,
+            });
+          }
+        }
+      } catch {
+        checks.push({
+          name: "Target Networks",
+          status: "warning",
+          message: "Could not read scaffold.config.ts",
+        });
+      }
+
+      // Build summary
+      const failedChecks = checks.filter(c => c.status === "fail");
+      const warningChecks = checks.filter(c => c.status === "warning");
+      const passedChecks = checks.filter(c => c.status === "pass");
+
+      const isReady = failedChecks.length === 0;
+
+      return {
+        success: true,
+        productionReady: isReady,
+        summary: isReady 
+          ? `✓ Ready for production deployment (${passedChecks.length} checks passed)`
+          : `✗ NOT ready for production (${failedChecks.length} critical issues)`,
+        chain: {
+          name: chain || "localhost",
+          chainId,
+          needsCustomRpc,
+        },
+        checks,
+        ...(failedChecks.length > 0 ? {
+          CRITICAL_ISSUES: {
+            count: failedChecks.length,
+            message: "You MUST fix these issues before deploying to production",
+            issues: failedChecks.map(c => ({
+              name: c.name,
+              problem: c.message,
+              solution: c.action,
+            })),
+          },
+        } : {}),
+        ...(warningChecks.length > 0 ? {
+          WARNINGS: warningChecks.map(c => ({
+            name: c.name,
+            message: c.message,
+            suggestion: c.action,
+          })),
+        } : {}),
+        nextSteps: isReady
+          ? [
+              "1. Deploy frontend: yarn vercel (or your hosting provider)",
+              "2. Set environment variables in your hosting dashboard",
+              "3. Deploy contracts: yarn deploy --network " + chain,
+            ]
+          : [
+              "1. Fix the critical issues listed above",
+              "2. Run stack_checkProductionReadiness again to verify",
+              "3. Then proceed with deployment",
+            ],
+      };
     },
   },
 };

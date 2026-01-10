@@ -125,6 +125,25 @@ When a user wants to build on any chain (Base, Ethereum, Optimism, etc.), NEVER 
 
 The answer is ALWAYS the same workflow. No questions needed.
 
+## CRITICAL RULE #3: RPC Configuration for Non-Ethereum Chains
+
+**For Base, Optimism, Arbitrum, Polygon: Public RPCs WILL FAIL in production!**
+
+| Chain | Public RPC | Status |
+|-------|-----------|--------|
+| Ethereum | mainnet.rpc.buidlguidl.com | ✅ FREE and reliable |
+| Base | mainnet.base.org | ❌ 429 rate limit errors |
+| Optimism | mainnet.optimism.io | ❌ 429 rate limit errors |
+| Arbitrum | arb1.arbitrum.io/rpc | ❌ 429 rate limit errors |
+| Polygon | polygon-rpc.com | ❌ 429 rate limit errors |
+
+**BEFORE deploying to any non-Ethereum chain:**
+1. Get a FREE API key from https://alchemy.com
+2. Add to \`packages/nextjs/.env.local\`: \`NEXT_PUBLIC_ALCHEMY_API_KEY=your_key\`
+3. For production hosting (Vercel): Add the same env var to your deployment
+
+**If you skip this step, the production app will show "429 Too Many Requests" errors and be completely unusable.**
+
 ## The ONLY Deployment Path
 
 ### Step 1: FORK (Development) - AI Can Run
@@ -190,23 +209,31 @@ When the user has finished testing on the fork and wants to deploy to mainnet, p
 > \`\`\`bash
 > cd /path/to/your/project
 > 
-> # Step 1: Create your encrypted deployer account
+> # Step 1: Configure RPC (CRITICAL for Base/Optimism/Arbitrum/Polygon!)
+> # Get FREE key from https://alchemy.com
+> # Add to packages/nextjs/.env.local:
+> echo 'NEXT_PUBLIC_ALCHEMY_API_KEY=your_alchemy_key' >> packages/nextjs/.env.local
+> # Also add to Vercel env vars when deploying!
+> 
+> # Step 2: Create your encrypted deployer account
 > yarn generate
 > # Enter a secure password - REMEMBER IT!
 > 
-> # Step 2: Check your deployer address
+> # Step 3: Check your deployer address
 > yarn account
 > # Copy the address shown
 > 
-> # Step 3: Fund the deployer (see amounts below)
+> # Step 4: Fund the deployer (see amounts below)
 > 
-> # Step 4: Deploy to mainnet
+> # Step 5: Deploy contracts to mainnet
 > yarn deploy --network [chain]
 > # Enter your password when prompted
 > 
-> # Step 5: Verify your contracts on the block explorer
+> # Step 6: Verify your contracts on the block explorer
 > yarn verify --network [chain]
 > \`\`\`
+> 
+> **CRITICAL for L2s:** If you skip Step 1 (RPC config), your production app will fail with 429 errors!
 > 
 > **Funding amounts:**
 > - L2s (Base, Optimism, Arbitrum): 0.001-0.002 ETH
@@ -1034,11 +1061,12 @@ This turns a potential bug into a learning moment!
 ### CRITICAL Lessons (memorize these!)
 
 1. **decimals-vary**: USDC = 6, not 18
-2. **no-decimals**: Use basis points (10000 = 100%)
-3. **nothing-automatic**: Who calls? Why?
-4. **reentrancy**: CEI pattern + guards
-5. **oracle-manipulation**: Never use spot DEX price
-6. **inflation-attack**: First depositor vulnerability
+2. **approvals**: Must approve before transferFrom, NEVER infinite approvals!
+3. **no-decimals**: Use basis points (10000 = 100%)
+4. **nothing-automatic**: Who calls? Why? (Reward callers for true decentralization)
+5. **reentrancy**: CEI pattern + guards
+6. **oracle-manipulation**: Never use spot DEX price
+7. **inflation-attack**: First depositor vulnerability
 
 ### The Most Important Concept
 
