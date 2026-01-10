@@ -502,8 +502,8 @@ Requires Foundry CLI tools (forge, anvil) - call stack_install_foundry first if 
           await fs.mkdir(workspacePath, { recursive: true });
         }
 
-        // Clone scaffold-eth-2
-        const cloneCmd = `git clone https://github.com/scaffold-eth/scaffold-eth-2.git ${workspacePath}`;
+        // Clone scaffold-eth-2 from the foundry branch (NOT main, which uses Hardhat)
+        const cloneCmd = `git clone -b foundry https://github.com/scaffold-eth/scaffold-eth-2.git ${workspacePath}`;
         const safetyCheck = isCommandAllowed(cloneCmd);
         if (!safetyCheck.safe) {
           return { success: false, error: safetyCheck.reason };
@@ -515,21 +515,9 @@ Requires Foundry CLI tools (forge, anvil) - call stack_install_foundry first if 
         await fs.rm(path.join(workspacePath, ".git"), { recursive: true, force: true });
 
         const foundryPath = path.join(workspacePath, "packages", "foundry");
-        const hardhatPath = path.join(workspacePath, "packages", "hardhat");
-
-        // Check if foundry package exists in the cloned repo
-        const foundryPackageExists = await fs
-          .access(foundryPath)
-          .then(() => true)
-          .catch(() => false);
-
-        // If foundry package doesn't exist, create it
-        if (!foundryPackageExists) {
-          await createFoundryPackage(workspacePath, chainConfig);
-        }
-
-        // Remove hardhat package if it exists (we want foundry-only)
-        await fs.rm(hardhatPath, { recursive: true, force: true }).catch(() => {});
+        
+        // The foundry branch already has packages/foundry with proper structure
+        // and all scripts pointing to foundry (not hardhat), so no conversion needed
 
         // Create/update .env file for foundry - NO PRIVATE KEYS
         // Local development uses Anvil's built-in funded accounts
@@ -606,22 +594,104 @@ CHAIN_ID=${chainConfig.chainId}
           console.error("Could not update scaffold.config.ts:", err);
         }
 
-        // Update root package.json to fix foundry script mappings
-        const rootPackageJsonPath = path.join(workspacePath, "package.json");
+        // The foundry branch already has correct script mappings in package.json
+        // (deploy, chain, fork, etc. all point to @se-2/foundry workspace)
+        // No script updates needed
+
+        // Create/update cursor rules for Foundry workflow
+        const cursorRulesDir = path.join(workspacePath, ".cursor", "rules");
+        const cursorRulesPath = path.join(cursorRulesDir, "scaffold-eth.mdc");
+        const cursorRulesContent = `---
+description:
+globs:
+alwaysApply: true
+---
+
+This codebase contains Scaffold-ETH 2 (SE-2) with Foundry, everything you need to build dApps on Ethereum. Its tech stack is NextJS, RainbowKit, Wagmi and Typescript for the frontend, and Foundry (Forge, Anvil) for smart contract development.
+
+It's a yarn monorepo that contains two main packages:
+
+- Foundry (\`packages/foundry\`): The Solidity framework to write, test and deploy EVM Smart Contracts using Forge.
+- NextJS (\`packages/nextjs\`): The UI framework extended with utilities to make interacting with Smart Contracts easy (using Next.js App Router, not Pages Router).
+
+The usual dev flow is:
+
+- Start SE-2 locally:
+  - \`yarn fork\`: Starts a local Anvil fork of mainnet (configured for ${chain})
+  - \`yarn deploy\`: Deploys contracts to the local fork
+  - \`yarn start\`: Starts the frontend
+- Write Smart Contracts in \`packages/foundry/contracts/\`
+- Modify the deployment script in \`packages/foundry/script/Deploy.s.sol\` if needed
+- Deploy locally (\`yarn deploy\`)
+- Go to \`http://localhost:3000/debug\` page to interact with your contract with a nice UI
+- Iterate until you get the functionality you want in your contract
+- Write tests for the contract in \`packages/foundry/test/\`
+- Create your custom UI using all the SE-2 components, hooks, and utilities
+- Deploy to mainnet when ready:
+  1. \`yarn generate\` - Create encrypted deployer wallet
+  2. \`yarn account\` - Get deployer address to fund
+  3. \`yarn deploy --network ${chain}\` - Deploy to real ${chain}
+- Deploy your UI (\`yarn vercel\` or \`yarn ipfs\`)
+
+## Smart Contract UI interactions guidelines
+
+SE-2 provides a set of hooks that facilitates contract interactions from the UI. It reads the contract data from \`deployedContracts.ts\` and \`externalContracts.ts\`, located in \`packages/nextjs/contracts\`.
+
+### Reading data from a contract
+
+Use the \`useScaffoldReadContract\` hook:
+
+\`\`\`typescript
+const { data: someData } = useScaffoldReadContract({
+  contractName: "YourContract",
+  functionName: "functionName",
+  args: [arg1, arg2], // optional
+});
+\`\`\`
+
+### Writing data to a contract
+
+Use the \`useScaffoldWriteContract\` hook:
+
+\`\`\`typescript
+const { writeContractAsync: writeYourContractAsync } = useScaffoldWriteContract(
+  { contractName: "YourContract" }
+);
+
+// Usage (this will send a write transaction to the contract)
+await writeContractAsync({
+  functionName: "functionName",
+  args: [arg1, arg2], // optional
+  value: parseEther("0.1"), // optional, for payable functions
+});
+\`\`\`
+
+### Reading events from a contract
+
+Use the \`useScaffoldEventHistory\` hook:
+
+\`\`\`typescript
+const { data: events, isLoading, error } = useScaffoldEventHistory({
+  contractName: "YourContract",
+  eventName: "GreetingChange",
+  watch: true, // optional, if true, the hook will watch for new events
+});
+\`\`\`
+
+## Display Components
+
+SE-2 provides pre-built React components for common Ethereum use cases:
+
+- \`Address\`: Always use this when displaying an ETH address
+- \`AddressInput\`: Always use this when users need to input an ETH address
+- \`Balance\`: Display the ETH/USDC balance of a given address
+- \`EtherInput\`: An extended number input with ETH/USD conversion
+`;
         try {
-          const rootPkgContent = await fs.readFile(rootPackageJsonPath, "utf-8");
-          const rootPkg = JSON.parse(rootPkgContent);
-          
-          // Ensure generate calls foundry:generate (not foundry:account)
-          rootPkg.scripts = rootPkg.scripts || {};
-          rootPkg.scripts["generate"] = "yarn foundry:generate";
-          rootPkg.scripts["foundry:generate"] = "yarn workspace @se-2/foundry generate";
-          rootPkg.scripts["foundry:account"] = "yarn workspace @se-2/foundry account";
-          rootPkg.scripts["account"] = "yarn foundry:account";
-          
-          await fs.writeFile(rootPackageJsonPath, JSON.stringify(rootPkg, null, 2));
+          await fs.mkdir(cursorRulesDir, { recursive: true });
+          await fs.writeFile(cursorRulesPath, cursorRulesContent);
         } catch (err) {
-          console.error("Could not update root package.json:", err);
+          console.error("Could not create cursor rules:", err);
         }
 
         // Update state
