@@ -104,6 +104,38 @@ export function getPromptMessages(name: string): PromptMessage[] | null {
             type: "text",
             text: `# The Deployment Workflow
 
+## CRITICAL RULE #0: NEVER Hardcode Contract Addresses
+
+**NEVER do this:**
+\`\`\`typescript
+const VAULT_ADDRESS = "0x31C2f2Ecd20944557A6fa1e98a8f34433B4E916b"; // ❌ WRONG!
+\`\`\`
+
+**ALWAYS use scaffold-eth hooks:**
+\`\`\`typescript
+// For YOUR deployed contracts (deployedContracts.ts):
+const { data: vaultInfo } = useDeployedContractInfo("YieldRedirectVault");
+
+// For external contracts (externalContracts.ts - configured via stack_configureExternalContracts):
+const { data: balance } = useScaffoldReadContract({
+  contractName: "USDC",
+  functionName: "balanceOf",
+  args: [address],
+});
+
+// Using an address AS AN ARGUMENT (e.g., approve spender):
+const { data: vaultInfo } = useDeployedContractInfo("YieldRedirectVault");
+const { writeContractAsync } = useScaffoldWriteContract("USDC");
+await writeContractAsync({
+  functionName: "approve",
+  args: [vaultInfo?.address, amount],  // ✅ Dynamic, not hardcoded!
+});
+\`\`\`
+
+**ZERO EXCEPTIONS:** If you need an address for ANY reason (function argument, allowance check, comparison), get it from useDeployedContractInfo. NEVER hardcode.
+
+---
+
 ## CRITICAL RULE #1: Interactive Commands - User Must Run Manually
 
 **These commands require password input and CANNOT be run by AI tools:**
@@ -182,14 +214,15 @@ yarn account
 - User copies address to fund
 
 **Funding by Chain:**
-| Chain | Amount Needed | Why |
-|-------|---------------|-----|
-| Ethereum | 0.01-0.05 ETH | Mainnet is expensive ($20-100) |
-| Base/Optimism | 0.001 ETH | L2s are very cheap (<$1) |
-| Arbitrum | 0.001-0.005 ETH | Slightly higher than Base/OP |
-| Polygon | 0.1-1 MATIC | Uses MATIC, not ETH |
+| Chain | Actual Deploy Cost | Minimum to Try |
+|-------|-------------------|----------------|
+| Ethereum | $20-100 | 0.01 ETH |
+| Base/Optimism | **$0.01-$0.10** | 0.00005 ETH (~$0.15) |
+| Arbitrum | $0.05-$0.50 | 0.0002 ETH (~$0.60) |
+| Polygon | $0.01-$0.10 | 0.05 MATIC |
 
-**L2s are CHEAP!** Don't overfund - 0.001 ETH on Base is enough for many deploys!
+**CRITICAL: If user has $0.10+ on Base/Optimism, TELL THEM TO TRY DEPLOYING!**
+Don't say "you need more money" - actual cost is usually under $0.10!
 
 ### Step 5: DEPLOY TO MAINNET - ⚠️ USER MUST RUN
 \`\`\`bash
@@ -235,9 +268,10 @@ When the user has finished testing on the fork and wants to deploy to mainnet, p
 > 
 > **CRITICAL for L2s:** If you skip Step 1 (RPC config), your production app will fail with 429 errors!
 > 
-> **Funding amounts:**
-> - L2s (Base, Optimism, Arbitrum): 0.001-0.002 ETH
-> - Ethereum mainnet: 0.01-0.05 ETH
+> **Funding:**
+> - L2s (Base, Optimism): If you have $0.10+, try deploying! Actual cost is ~$0.01-$0.10
+> - Arbitrum: If you have $0.50+, try deploying! Actual cost is ~$0.05-$0.50
+> - Ethereum mainnet: 0.01-0.05 ETH ($30-150)
 > 
 > Let me know when you're done!"
 

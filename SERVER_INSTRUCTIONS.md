@@ -19,6 +19,68 @@ eth-mcp helps users build decentralized applications on Ethereum and EVM-compati
 
 These issues will cause problems if ignored. Read this section before starting any project.
 
+### 🚨 NEVER Hardcode Contract Addresses (WILL BREAK IN PRODUCTION!)
+
+**NEVER do this in frontend code:**
+```typescript
+// ❌ WRONG - HARDCODED ADDRESS - WILL BREAK BETWEEN ENVIRONMENTS
+const VAULT_ADDRESS = "0x31C2f2Ecd20944557A6fa1e98a8f34433B4E916b";
+const USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+```
+
+**ALWAYS use scaffold-eth hooks:**
+```typescript
+// ✅ CORRECT - For contracts YOU deployed (in deployedContracts.ts)
+const { data: vaultInfo } = useDeployedContractInfo("YieldRedirectVault");
+const vaultAddress = vaultInfo?.address;
+
+// ✅ CORRECT - For reading/writing to your deployed contracts
+const { data: balance } = useScaffoldReadContract({
+  contractName: "YieldRedirectVault",
+  functionName: "totalAssets",
+});
+
+// ✅ CORRECT - For external contracts (in externalContracts.ts)
+const { data: usdcBalance } = useScaffoldReadContract({
+  contractName: "USDC",  // Configured via stack_configureExternalContracts
+  functionName: "balanceOf",
+  args: [address],
+});
+
+// ✅ CORRECT - Using an address AS AN ARGUMENT to another contract
+// Example: Approving the vault to spend USDC
+const { data: vaultInfo } = useDeployedContractInfo("YieldRedirectVault");
+const { writeContractAsync } = useScaffoldWriteContract("USDC");
+
+await writeContractAsync({
+  functionName: "approve",
+  args: [vaultInfo?.address, amount],  // ✅ Dynamic address from hook
+});
+
+// ❌ WRONG - NEVER do this even for function arguments!
+await writeContractAsync({
+  functionName: "approve",
+  args: ["0x31C2f2Ecd20944557A6fa1e98a8f34433B4E916b", amount],  // ❌ Hardcoded!
+});
+```
+
+**ZERO EXCEPTIONS RULE:** If you need an address for ANY reason - as a function argument, for allowance checks, for comparisons, for ANYTHING - get it from `useDeployedContractInfo` or the contracts config. There are ZERO exceptions.
+
+**Why this is CRITICAL:**
+- Local fork uses address `0xabc...`
+- Mainnet deployment uses address `0xdef...`
+- Hardcoded addresses = app works locally, **BREAKS in production**
+
+**The two contract files:**
+- `deployedContracts.ts` - Auto-generated when you run `yarn deploy`. Contains YOUR contracts.
+- `externalContracts.ts` - Configure via `stack_configureExternalContracts`. Contains external protocols (USDC, Aave, Uniswap).
+
+**BOTH are accessible via scaffold-eth hooks. NEVER hardcode. EVER. ZERO EXCEPTIONS.**
+
+**Common mistake:** "I know the address, I'll just paste it." NO! Even if you have the address, get it dynamically. The address you have is for ONE environment - it will break in others.
+
+---
+
 ### 🚨 RPC Configuration (PRODUCTION WILL FAIL WITHOUT THIS!)
 
 **For Base, Optimism, Arbitrum, Polygon: Public RPCs fail with 429 rate limit errors!**
@@ -84,8 +146,8 @@ To deploy to mainnet, you'll need to run a few commands manually
    (Copy the address shown)
 
 4. Fund the deployer address:
-   - For L2s (Base, Optimism, Arbitrum): Send 0.001-0.002 ETH
-   - For Ethereum mainnet: Send 0.01-0.05 ETH
+   - For L2s (Base, Optimism, Arbitrum): Actual cost is $0.01-$0.10. If you have 0.00005+ ETH (~$0.15), try deploying!
+   - For Ethereum mainnet: Send 0.01-0.05 ETH ($30-150)
 
 5. Deploy contracts to mainnet:
    yarn deploy --network <chain>
@@ -299,8 +361,10 @@ When user is ready for mainnet, give **chain-specific** funding amounts:
 > "To deploy to [chain]:
 > 1. Run `yarn generate` to create an encrypted deployer account
 > 2. Run `yarn account` to see the deployer address
-> 3. Fund that address with **0.001-0.002 ETH** (L2 deployments cost <$1!)
-> 4. Run `yarn deploy --network [chain]` (you'll be prompted for your password)"
+> 3. **If you have $0.10+ worth of ETH, try deploying!** Actual cost is usually $0.01-$0.10.
+> 4. Run `yarn deploy --network [chain]` (you'll be prompted for your password)
+> 
+> Don't have enough? Add just $0.50-$1 worth of ETH - that's plenty for many deployments!"
 
 **For Ethereum Mainnet:**
 > "To deploy to Ethereum:
@@ -311,15 +375,18 @@ When user is ready for mainnet, give **chain-specific** funding amounts:
 
 **Gas Cost Reference:**
 
-| Chain | Recommended Funding | Typical Deploy Cost |
-|-------|---------------------|---------------------|
-| Ethereum Mainnet | 0.01-0.05 ETH | $20-100 |
-| Base | 0.0005-0.002 ETH | $0.01-0.50 |
-| Optimism | 0.0005-0.002 ETH | $0.01-0.50 |
-| Arbitrum | 0.001-0.005 ETH | $0.10-1.00 |
-| Polygon | 0.1-1 MATIC | $0.01-0.10 |
+| Chain | Actual Deploy Cost | Minimum to Try | Comfortable Buffer |
+|-------|-------------------|----------------|-------------------|
+| Ethereum Mainnet | $20-100 | 0.01 ETH | 0.03-0.05 ETH |
+| Base | **$0.01-$0.10** | 0.00005 ETH (~$0.15) | 0.0005 ETH (~$1.50) |
+| Optimism | **$0.01-$0.10** | 0.00005 ETH (~$0.15) | 0.0005 ETH (~$1.50) |
+| Arbitrum | $0.05-$0.50 | 0.0002 ETH (~$0.60) | 0.001 ETH (~$3) |
+| Polygon | $0.01-$0.10 | 0.05 MATIC | 0.5 MATIC |
 
-**IMPORTANT**: Don't tell L2 users to fund with "0.01-0.1 ETH" - that's 10-100x more than needed!
+**CRITICAL FOR L2s**: If user has $0.10+ worth of ETH on Base/Optimism, **TELL THEM TO TRY DEPLOYING**. Don't say they need more money! Actual cost is usually under $0.10.
+
+**WRONG**: "You need $3-5 more for deployment"
+**RIGHT**: "You have $0.20 - that should be plenty! Base deploys typically cost $0.01-$0.10. Let's try it!"
 
 **NEVER suggest setting DEPLOYER_PRIVATE_KEY in any file.**
 
@@ -433,7 +500,7 @@ If you cannot read `.env` files directly, always prompt the user to make the cha
    - Creates an ENCRYPTED deployer wallet
    - You set a password to protect it
    - **Fund the deployer based on chain:**
-     - L2s (Base, Optimism, Arbitrum): **0.001 ETH is plenty** (~$3, enough for many deploys)
+     - L2s (Base, Optimism): **$0.10 is usually enough!** Actual cost ~$0.01-$0.10
      - Ethereum mainnet: **0.01-0.05 ETH** ($30-150, mainnet is expensive)
 
 4. **DEPLOY**: `yarn deploy --network <chain>` for real mainnet
@@ -455,7 +522,7 @@ If you cannot read `.env` files directly, always prompt the user to make the cha
 > "Should I deploy to Base Sepolia or Base mainnet?"
 
 **CORRECT:**
-> "I'll set up a local Base fork for development. This gives you real Base mainnet state to test against, completely free. When you're ready for mainnet, run `yarn generate` to create an encrypted deployer, fund it with ~0.001 ETH (Base deployments are very cheap - under $1), then `yarn deploy --network base`."
+> "I'll set up a local Base fork for development. This gives you real Base mainnet state to test against, completely free. When you're ready for mainnet, run `yarn generate` to create an encrypted deployer. Base deployments cost ~$0.01-$0.10 - if you have $0.10+ worth of ETH, just try deploying! Then run `yarn deploy --network base`."
 
 ## If User Explicitly Asks for Testnet
 
@@ -848,7 +915,8 @@ These commands require password input, so you'll need to run them yourself:
    (Copy the deployer address shown)
 
 4. Fund the address with ETH:
-   - L2s (Base, Optimism, Arbitrum): 0.001-0.002 ETH
+   - L2s (Base, Optimism): If you have $0.10+, try deploying! Actual cost ~$0.01-$0.10
+   - Arbitrum: If you have $0.50+, try deploying! Actual cost ~$0.05-$0.50
    - Ethereum mainnet: 0.01-0.05 ETH
 
 5. yarn deploy --network <chain>

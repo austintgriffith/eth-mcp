@@ -301,6 +301,42 @@ globs:
 alwaysApply: true
 ---
 
+## CRITICAL: NEVER Hardcode Contract Addresses
+
+**NEVER do this in frontend code:**
+\`\`\`typescript
+// ❌ WRONG - WILL BREAK IN PRODUCTION
+const VAULT_ADDRESS = "0x31C2f2Ecd20944557A6fa1e98a8f34433B4E916b";
+\`\`\`
+
+**ALWAYS use scaffold-eth hooks:**
+\`\`\`typescript
+// ✅ For YOUR deployed contracts (deployedContracts.ts - auto-generated on yarn deploy)
+const { data: vaultInfo } = useDeployedContractInfo("YieldRedirectVault");
+const vaultAddress = vaultInfo?.address;
+
+// ✅ For reading/writing contracts
+const { data: balance } = useScaffoldReadContract({
+  contractName: "YieldRedirectVault",
+  functionName: "totalAssets",
+});
+
+// ✅ For external contracts (externalContracts.ts)
+const { writeContractAsync } = useScaffoldWriteContract("USDC");
+
+// ✅ Using address AS AN ARGUMENT (e.g., approve the vault as spender)
+const { data: vaultInfo } = useDeployedContractInfo("YieldRedirectVault");
+await writeContractAsync({
+  functionName: "approve",
+  args: [vaultInfo?.address, amount],  // ✅ Dynamic!
+});
+// ❌ NEVER: args: ["0x31C2f2...", amount]  // Hardcoded = BROKEN
+\`\`\`
+
+**ZERO EXCEPTIONS:** If you need an address for ANY reason (function argument, allowance check, comparison, ANYTHING), get it from useDeployedContractInfo. Never hardcode.
+
+---
+
 ## PROTECTED SETTINGS - DO NOT MODIFY
 
 These settings have correct defaults. Changing them causes serious problems.
@@ -312,10 +348,11 @@ These settings have correct defaults. Changing them causes serious problems.
 
 ## AI BEHAVIOR RULES
 
-1. Only change the specific thing asked. Nothing else.
-2. If you think something else needs changing, STOP and ask first.
-3. Do NOT change config settings without explaining what they do.
-4. When a setting name seems "obvious", that's when you verify - obvious names are often wrong.
+1. **NEVER hardcode contract addresses. Use deployedContracts.ts and externalContracts.ts via hooks.**
+2. Only change the specific thing asked. Nothing else.
+3. If you think something else needs changing, STOP and ask first.
+4. Do NOT change config settings without explaining what they do.
+5. When a setting name seems "obvious", that's when you verify - obvious names are often wrong.
 
 ---
 
@@ -810,10 +847,10 @@ This tool returns step-by-step instructions for the user to run in their termina
       const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
       const needsCustomRpc = ["base", "optimism", "arbitrum", "polygon"].includes(chain.toLowerCase());
       const fundingAmount = isL2 
-        ? "0.001-0.002 ETH (L2s are cheap - deployments cost <$1!)"
+        ? "If you have $0.10+ worth of ETH, TRY DEPLOYING! Actual cost is ~$0.01-$0.10."
         : chain === "mainnet" 
-          ? "0.01-0.05 ETH (mainnet is expensive - $20-100)"
-          : "appropriate ETH for your chain (L2s: ~0.001 ETH, mainnet: ~0.01-0.05 ETH)";
+          ? "0.01-0.05 ETH (mainnet is expensive - $30-150)"
+          : "For L2s (Base/Optimism): $0.10 is usually enough. For mainnet: 0.01-0.05 ETH";
 
       // Build RPC configuration instructions for L2s
       const rpcInstructions = needsCustomRpc ? [
@@ -914,10 +951,10 @@ This tool returns step-by-step instructions for the user to run in their termina
       const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
       const needsCustomRpc = ["base", "optimism", "arbitrum", "polygon"].includes(chain.toLowerCase());
       const fundingAmount = isL2 
-        ? "0.001-0.002 ETH (L2s are cheap - deployments cost <$1!)"
+        ? "If you have $0.10+ worth of ETH, TRY DEPLOYING! Actual cost is ~$0.01-$0.10."
         : chain === "mainnet" 
-          ? "0.01-0.05 ETH (mainnet is expensive - $20-100)"
-          : "appropriate ETH for your chain (L2s: ~0.001 ETH, mainnet: ~0.01-0.05 ETH)";
+          ? "0.01-0.05 ETH (mainnet is expensive - $30-150)"
+          : "For L2s (Base/Optimism): $0.10 is usually enough. For mainnet: 0.01-0.05 ETH";
 
       // Return instructions instead of executing
       return {

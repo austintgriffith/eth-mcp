@@ -145,15 +145,18 @@ Shows your deployer address and balances:
 
 #### How Much ETH Do I Need?
 
-**L2s are CHEAP!** Don't overfund based on mainnet prices.
+**L2s are EXTREMELY CHEAP!** If you have $0.10+, TRY DEPLOYING!
 
-| Chain | Recommended Funding | Typical Deploy Cost | Notes |
-|-------|---------------------|---------------------|-------|
-| **Ethereum Mainnet** | 0.01-0.05 ETH | $20-100 | Expensive - varies with gas price |
-| **Base** | 0.0005-0.002 ETH | $0.01-0.50 | Very cheap! |
-| **Optimism** | 0.0005-0.002 ETH | $0.01-0.50 | Very cheap! |
-| **Arbitrum** | 0.001-0.005 ETH | $0.10-1.00 | Slightly higher than OP/Base |
-| **Polygon** | 0.1-1 MATIC | $0.01-0.10 | Uses MATIC, not ETH |
+| Chain | Actual Deploy Cost | Minimum to Try | Comfortable Buffer |
+|-------|-------------------|----------------|-------------------|
+| **Ethereum Mainnet** | $20-100 | 0.01 ETH | 0.03-0.05 ETH |
+| **Base** | **$0.01-$0.10** | 0.00005 ETH (~$0.15) | 0.0005 ETH (~$1.50) |
+| **Optimism** | **$0.01-$0.10** | 0.00005 ETH (~$0.15) | 0.0005 ETH (~$1.50) |
+| **Arbitrum** | $0.05-$0.50 | 0.0002 ETH (~$0.60) | 0.001 ETH (~$3) |
+| **Polygon** | $0.01-$0.10 | 0.05 MATIC | 0.5 MATIC |
+
+**CRITICAL**: If user has $0.10+ on Base/Optimism, **TELL THEM TO TRY DEPLOYING!**
+Don't say "you need $3-5 more" - that's wrong! Actual cost is usually under $0.10.
 
 **Real example**: A complex vault contract deployment on Base costs ~0.000003 ETH (~$0.01). You could deploy 300+ contracts with just 0.001 ETH!
 
@@ -290,7 +293,8 @@ To deploy to mainnet, you'll need to run these commands yourself
    → Copy the deployer address shown
 
 4. Fund the deployer:
-   - L2s (Base/Optimism/Arbitrum): 0.001-0.002 ETH
+   - L2s (Base/Optimism): $0.10 is usually enough! Actual cost ~$0.01-$0.10
+   - Arbitrum: $0.50 is usually enough! Actual cost ~$0.05-$0.50
    - Ethereum mainnet: 0.01-0.05 ETH
 
 5. yarn deploy --network <chain>
@@ -336,7 +340,7 @@ ALWAYS:
 > yarn account           # Copy the deployer address shown
 > ```
 > 
-> Fund that address with **0.001-0.002 ETH** (L2 deployments are very cheap - typically <$1)
+> **If you have $0.10+ worth of ETH, try deploying!** Actual cost is ~$0.01-$0.10.
 > 
 > ```bash
 > yarn deploy --network [chain]   # Enter your password when prompted
@@ -389,7 +393,8 @@ That's why you test on the fork first! The fork has real mainnet state. If your 
 ### "Don't I need testnet ETH?"
 
 No. Fork development costs nothing. When ready for mainnet, you fund your deployer with real ETH:
-- **L2s (Base, Optimism, Arbitrum)**: 0.001 ETH is plenty (~$3, enough for many deploys)
+- **L2s (Base, Optimism)**: If you have $0.10+, try deploying! Actual cost is ~$0.01-$0.10
+- **Arbitrum**: If you have $0.50+, try deploying! Actual cost is ~$0.05-$0.50
 - **Ethereum mainnet**: 0.01-0.05 ETH ($30-150, mainnet is expensive)
 
 ### "What about contract verification?"
@@ -422,7 +427,7 @@ Yes, but it's not recommended. Forks are strictly better for development. Only e
 │                   PRODUCTION (COSTS GAS)                          │
 │  ┌────────────┐    ┌────────────┐    ┌─────────────────────────┐ │
 │  │  yarn      │ -> │  yarn      │ -> │  Fund deployer:         │ │
-│  │  generate  │    │  account   │    │  L2: 0.001 ETH (~$3)    │ │
+│  │  generate  │    │  account   │    │  L2: $0.10 usually enough│ │
 │  │ (encrypted)│    │ (get addr) │    │  Mainnet: 0.01-0.05 ETH │ │
 │  └────────────┘    └────────────┘    └─────────────────────────┘ │
 │         │                                                         │
@@ -434,7 +439,7 @@ Yes, but it's not recommended. Forks are strictly better for development. Only e
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-**L2s are cheap!** Base/Optimism/Arbitrum deployments cost <$1. Don't overfund!
+**L2s are EXTREMELY cheap!** Base/Optimism deploys cost $0.01-$0.10. If you have $0.10, TRY IT!
 
 **Private keys are NEVER stored in plain text. Always encrypted with your password.**
 
