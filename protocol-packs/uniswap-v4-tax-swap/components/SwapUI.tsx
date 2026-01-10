@@ -2,6 +2,13 @@
  * SwapUI Component
  * React component for swapping tokens with tax visualization
  *
+ * DESIGN SYSTEM: This component follows the eth-mcp Frontend Design Guide
+ * - Uses DaisyUI theme tokens only (no custom colors)
+ * - Recommended theme: "corporate" for DeFi/Finance apps
+ * - No gradients, no glassmorphism, no large shadows
+ * - Shadows limited to shadow-md max
+ * - References: Uniswap app (not marketing), Etherscan styling
+ *
  * PLACEHOLDER - This shows the structure for a swap UI
  * Full implementation requires:
  * - wagmi hooks for wallet connection
@@ -30,8 +37,8 @@ const TokenInput: React.FC<{
   token: string;
   disabled?: boolean;
 }> = ({ label, value, onChange, token, disabled }) => (
-  <div className="bg-base-200 rounded-lg p-4 mb-2">
-    <div className="text-sm text-gray-500 mb-1">{label}</div>
+  <div className="bg-base-200 rounded-lg p-4 mb-2 border border-base-300">
+    <div className="text-sm text-base-content/60 mb-1">{label}</div>
     <div className="flex items-center gap-2">
       <input
         type="number"
@@ -151,10 +158,10 @@ export const SwapUI: React.FC<SwapUIProps> = ({
   const outputToken = swapDirection === "taxToEth" ? "ETH" : "TAX";
 
   return (
-    <div className="card bg-base-100 shadow-xl max-w-md mx-auto">
+    <div className="card bg-base-100 shadow-md border border-base-300 max-w-md mx-auto">
       <div className="card-body">
         <h2 className="card-title justify-center mb-4">
-          🔄 Swap Tokens
+          Swap Tokens
         </h2>
 
         {/* Input */}
@@ -165,13 +172,16 @@ export const SwapUI: React.FC<SwapUIProps> = ({
           token={inputToken}
         />
 
-        {/* Swap direction button */}
+        {/* Swap direction button - simple, no emoji */}
         <div className="flex justify-center -my-2 z-10">
           <button
             onClick={toggleDirection}
-            className="btn btn-circle btn-sm btn-primary"
+            className="btn btn-circle btn-sm btn-outline"
+            aria-label="Switch swap direction"
           >
-            ↕️
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
           </button>
         </div>
 
@@ -198,8 +208,8 @@ export const SwapUI: React.FC<SwapUIProps> = ({
           {isLoading ? "Swapping..." : "Swap"}
         </button>
 
-        {/* Info */}
-        <div className="text-xs text-gray-500 text-center mt-2">
+        {/* Info - uses theme token for muted text */}
+        <div className="text-xs text-base-content/50 text-center mt-2">
           <p>1% tax on TAX token sales</p>
           <p>Tax goes to protocol treasury</p>
         </div>

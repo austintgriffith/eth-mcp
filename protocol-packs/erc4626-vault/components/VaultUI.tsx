@@ -1,5 +1,16 @@
 "use client";
 
+/**
+ * VaultUI Component
+ * 
+ * DESIGN SYSTEM: This component follows the eth-mcp Frontend Design Guide
+ * - Uses DaisyUI theme tokens only (no custom colors)
+ * - Recommended theme: "corporate" for DeFi/Finance apps
+ * - No gradients, no glassmorphism, no large shadows
+ * - Shadows limited to shadow-sm (stats, info) and shadow-md (main card)
+ * - References: Etherscan, Aave Dashboard styling
+ */
+
 import { useState } from "react";
 import { formatUnits, parseUnits } from "viem";
 import { useAccount, useBalance } from "wagmi";
@@ -112,8 +123,8 @@ export default function VaultUI({
         Deposit {assetSymbol} to earn yield
       </p>
 
-      {/* Vault Stats */}
-      <div className="stats shadow mb-8 bg-base-200">
+      {/* Vault Stats - shadow-sm for secondary containers */}
+      <div className="stats shadow-sm mb-8 bg-base-200 border border-base-300">
         <div className="stat">
           <div className="stat-title">Total Deposited</div>
           <div className="stat-value text-2xl">
@@ -137,8 +148,8 @@ export default function VaultUI({
         </div>
       </div>
 
-      {/* Deposit/Withdraw Card */}
-      <div className="card w-full max-w-md bg-base-200 shadow-xl">
+      {/* Deposit/Withdraw Card - shadow-md max per design system */}
+      <div className="card w-full max-w-md bg-base-100 shadow-md border border-base-300">
         <div className="card-body">
           {/* Tab Buttons */}
           <div className="tabs tabs-boxed mb-4">

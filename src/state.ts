@@ -57,7 +57,7 @@ export interface StackState {
 const CHAIN_CONFIGS: Record<string, { chainId: number; rpcUrl: string; blockExplorer: string }> = {
   mainnet: {
     chainId: 1,
-    rpcUrl: "https://eth.llamarpc.com",
+    rpcUrl: "https://mainnet.rpc.buidlguidl.com", // BuidlGuidl free RPC - reliable for Ethereum mainnet
     blockExplorer: "https://etherscan.io",
   },
   base: {

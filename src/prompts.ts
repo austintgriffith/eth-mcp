@@ -67,6 +67,16 @@ export const prompts: Prompt[] = [
     description: "How to use eth-mcp's education tools to surface Web3 gotchas and teaching moments during development",
     arguments: [],
   },
+  {
+    name: "frontend-design",
+    description: "CRITICAL: How to create professional frontends - NO purple gradients. Use DaisyUI themes, context-appropriate styling, and proper design systems.",
+    arguments: [],
+  },
+  {
+    name: "rpc-configuration",
+    description: "CRITICAL: How to configure RPC endpoints for production. Public RPCs fail with 429 errors - use BuidlGuidl for Ethereum, get Alchemy keys for other chains.",
+    arguments: [],
+  },
 ];
 
 /**
@@ -124,7 +134,17 @@ yarn generate
 \`\`\`
 - Creates a new deployer wallet
 - Shows you the address to fund
-- Fund it with a small amount of ETH (0.01-0.1 ETH usually enough)
+- Fund it based on your target chain (see below)
+
+**Funding by Chain:**
+| Chain | Amount Needed | Why |
+|-------|---------------|-----|
+| Ethereum | 0.01-0.05 ETH | Mainnet is expensive ($20-100) |
+| Base/Optimism | 0.001 ETH | L2s are very cheap (<$1) |
+| Arbitrum | 0.001-0.005 ETH | Slightly higher than Base/OP |
+| Polygon | 0.1-1 MATIC | Uses MATIC, not ETH |
+
+**L2s are CHEAP!** Don't overfund - 0.001 ETH on Base is enough for many deploys!
 
 ### Step 4: DEPLOY TO MAINNET
 \`\`\`bash
@@ -132,7 +152,7 @@ yarn deploy --network base
 \`\`\`
 - Deploys to REAL Base mainnet
 - Uses the deployer wallet you funded
-- **Cost: Real gas** - but you're confident it works!
+- **Cost: Real gas** - but L2s cost <$1 per deploy!
 
 ## Why NOT Testnets?
 
@@ -174,7 +194,7 @@ User: "Build me a swap app on Base"
 > 3. Write contracts
 > 4. \`stack_start({ components: ["fork", "deploy", "frontend"] })\`
 > 
-> Everything runs locally. When ready for mainnet, we'll use \`yarn generate\` and \`yarn deploy --network base\`.
+> Everything runs locally. When ready for mainnet, we'll use \`yarn generate\`, fund the deployer with ~0.001 ETH (Base is very cheap - under $1 per deploy), and \`yarn deploy --network base\`.
 
 ## When Someone Asks for Testnet
 
@@ -589,7 +609,18 @@ stack_init({ template: "scaffold-eth", chain: "base", workspacePath: "/tmp/aave-
 stack_install()
 \`\`\`
 
-### Step 4: Write the vault contract
+### Step 4: Configure external contracts for debug UI
+\`\`\`
+stack_configureExternalContracts({
+  contracts: [
+    { name: "USDC", type: "ERC20" },
+    { name: "pool", type: "AaveV3Pool" }
+  ]
+})
+\`\`\`
+This adds USDC and the Aave pool to the debug UI so you can test interactions directly.
+
+### Step 5: Write the vault contract
 \`\`\`solidity
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
@@ -635,10 +666,12 @@ contract AaveVault is ERC4626 {
 }
 \`\`\`
 
-### Step 5: Deploy and test
+### Step 6: Deploy and test
 \`\`\`
 stack_start({ components: ["fork", "deploy", "frontend"] })
 \`\`\`
+
+The debug UI will now show your vault contract PLUS USDC and Aave pool for testing.
 
 ## Security Considerations
 
@@ -665,8 +698,9 @@ stack_start({ components: ["fork", "deploy", "frontend"] })
 ## Next Steps
 
 1. Use \`defi_compareYields\` to find best yield sources
-2. Check docs/YIELD_VAULT_GUIDE.md for detailed patterns
-3. Look at protocol-packs/aave-vault for complete implementation`,
+2. Use \`stack_configureExternalContracts\` for any external protocol you integrate with
+3. Check docs/YIELD_VAULT_GUIDE.md for detailed patterns
+4. Look at protocol-packs/aave-vault for complete implementation`,
           },
         },
       ];
@@ -961,6 +995,268 @@ If you can't answer "why would anyone call this?", the function is dead code.
 - **Connect to their project**: "In your vault, this means..."
 
 The goal is not to lecture, but to surface the right lesson at the right moment.`,
+          },
+        },
+      ];
+
+    case "frontend-design":
+      return [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: "How should I design the frontend for my dApp?",
+          },
+        },
+        {
+          role: "assistant",
+          content: {
+            type: "text",
+            text: `# Frontend Design Guide
+
+## CRITICAL RULE: No Purple Gradients
+
+When building any frontend, NEVER default to:
+- Purple, violet, lavender, or indigo colors
+- Gradient backgrounds
+- Glassmorphism or blur effects
+- Glow effects or large shadows
+
+These create generic "vibe coded" UIs that reduce trust and credibility.
+
+## Step 1: Choose a DaisyUI Theme Based on Project Type
+
+Scaffold-ETH 2 includes DaisyUI. Select the RIGHT theme:
+
+| Project Type | Use Theme | Why |
+|--------------|-----------|-----|
+| DeFi / Finance / Vaults | \`corporate\` | Trust, professional, serious |
+| Developer Tools | \`dracula\` | Terminal-like, technical |
+| NFT / Consumer | \`retro\` | Friendly, approachable |
+| Data Dashboards | \`lofi\` | Clean, information-dense |
+| Gaming | \`retro\` or \`bumblebee\` | Fun but controlled |
+
+Set in \`packages/nextjs/tailwind.config.js\`:
+\`\`\`js
+daisyui: {
+  themes: ["corporate"], // ONE theme only
+}
+\`\`\`
+
+## Step 2: Design Lint Before Coding
+
+Before writing ANY UI code, verify:
+
+- [ ] No purple/violet/indigo colors anywhere
+- [ ] No \`bg-gradient-*\` classes
+- [ ] All colors from DaisyUI theme tokens
+- [ ] No \`backdrop-blur\` or glassmorphism
+- [ ] Shadows max \`shadow-md\` (4px)
+- [ ] Using DaisyUI components (btn, card, input)
+
+If ANY check fails, revise your plan.
+
+## Step 3: Use Material Descriptions
+
+When the user says "make it modern" or "sleek", translate to:
+- "industrial, utilitarian"
+- "print-like, newspaper"
+- "paper & ink"
+
+DO NOT translate to purple gradients.
+
+## Component Examples
+
+### GOOD: Card
+\`\`\`tsx
+<div className="card bg-base-100 shadow-sm border border-base-300">
+  <div className="card-body">
+    <h2 className="card-title">Vault Balance</h2>
+    <p className="text-2xl font-mono">$12,345.67</p>
+  </div>
+</div>
+\`\`\`
+
+### BAD: Card (NEVER DO THIS)
+\`\`\`tsx
+<div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl shadow-2xl p-6">
+  ...
+</div>
+\`\`\`
+
+### GOOD: Stats
+\`\`\`tsx
+<div className="stats bg-base-200 shadow-sm">
+  <div className="stat">
+    <div className="stat-title">TVL</div>
+    <div className="stat-value">$4.2M</div>
+  </div>
+</div>
+\`\`\`
+
+### GOOD: Buttons
+\`\`\`tsx
+<button className="btn btn-primary">Deposit</button>
+<button className="btn btn-outline">Cancel</button>
+\`\`\`
+
+## Reference Sites (Design Like These)
+
+- **Etherscan** (light mode) - Dense, utilitarian, trusted
+- **GitHub Settings** - Functional, professional
+- **Stripe Dashboard** - Clean whitespace
+- **GOV.UK** - Accessible, clear hierarchy
+
+NOT like SaaS marketing sites with hero gradients.
+
+## Handling User Requests
+
+**User: "Make it look modern"**
+→ Use corporate theme, good spacing, clear hierarchy
+→ DO NOT add purple or gradients
+
+**User: "Make it pop"**
+→ Strategic accent colors, hover states, icons
+→ DO NOT add glow or gradients
+
+**User: "I want purple gradients"**
+→ THEN use them. User intent overrides guidelines.
+
+## Why This Matters
+
+1. **Trust**: Purple gradients = "generic AI app" = skepticism
+2. **Credibility**: Financial apps need to look serious
+3. **Usability**: Flat colors are more readable
+4. **Differentiation**: NOT looking generic is a feature
+
+## Quick Reference
+
+\`\`\`
+DEFAULT THEME: corporate
+FALLBACK: lofi
+
+SAFE ACCENTS: emerald, amber, red (from theme)
+
+BANNED: purple, gradients, glassmorphism, glow, large shadows
+
+REFERENCE: Etherscan, GitHub, Stripe, GOV.UK
+\`\`\``,
+          },
+        },
+      ];
+
+    case "rpc-configuration":
+      return [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: "How do I configure RPC endpoints for my project?",
+          },
+        },
+        {
+          role: "assistant",
+          content: {
+            type: "text",
+            text: `# RPC Configuration Guide
+
+## CRITICAL: Public RPCs Fail Under Load
+
+Public RPC endpoints like \`mainnet.base.org\` get rate limited immediately with 429 errors. You MUST configure proper RPCs for production.
+
+## Default RPCs by Chain
+
+| Chain | Default RPC | Reliability |
+|-------|-------------|-------------|
+| Ethereum | \`mainnet.rpc.buidlguidl.com\` | FREE, reliable - use this! |
+| Base | \`mainnet.base.org\` | FAILS with 429 under load |
+| Optimism | \`mainnet.optimism.io\` | Rate limited |
+| Arbitrum | \`arb1.arbitrum.io/rpc\` | Rate limited |
+| Polygon | \`polygon-rpc.com\` | Rate limited |
+
+## For Local Development
+
+Local development (forking) may work with public RPCs for a while. If you see 429 errors in the console:
+
+\`\`\`
+POST https://mainnet.base.org/ 429 (Too Many Requests)
+\`\`\`
+
+This means the public RPC is rate limiting you. You need your own API key.
+
+## Getting an RPC API Key
+
+**Free options:**
+- **Alchemy**: https://alchemy.com (recommended - generous free tier)
+- **Infura**: https://infura.io
+- **QuickNode**: https://quicknode.com
+
+## Configuring RPC in Your Project
+
+**Two files need configuration:**
+
+### 1. packages/foundry/.env (for forking and deployment)
+
+\`\`\`bash
+FORK_URL=https://base-mainnet.g.alchemy.com/v2/YOUR_API_KEY
+CHAIN_ID=8453
+\`\`\`
+
+### 2. packages/nextjs/.env.local (for frontend RPC calls)
+
+First, copy from the example:
+\`\`\`bash
+cp packages/nextjs/.env.example packages/nextjs/.env.local
+\`\`\`
+
+Then add:
+\`\`\`bash
+NEXT_PUBLIC_ALCHEMY_API_KEY=YOUR_API_KEY
+\`\`\`
+
+## Alchemy RPC URLs by Chain
+
+| Chain | Alchemy RPC URL |
+|-------|-----------------|
+| Ethereum | \`https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY\` |
+| Base | \`https://base-mainnet.g.alchemy.com/v2/YOUR_KEY\` |
+| Optimism | \`https://opt-mainnet.g.alchemy.com/v2/YOUR_KEY\` |
+| Arbitrum | \`https://arb-mainnet.g.alchemy.com/v2/YOUR_KEY\` |
+| Polygon | \`https://polygon-mainnet.g.alchemy.com/v2/YOUR_KEY\` |
+
+## SAFETY: Never Overwrite .env Files
+
+When helping users configure RPC, NEVER use \`>\` which overwrites:
+
+\`\`\`bash
+# WRONG - destroys existing config
+echo 'FORK_URL=...' > packages/foundry/.env
+
+# RIGHT - append to file
+echo 'FORK_URL=...' >> packages/foundry/.env
+
+# BEST - ask user to edit manually
+"Please add this line to packages/foundry/.env: FORK_URL=..."
+\`\`\`
+
+If you cannot read .env files directly (they're often gitignored), ask the user to make the changes manually.
+
+## When to Prompt for RPC Keys
+
+1. **When starting local dev on non-Ethereum chains**: "Note: If you see 429 errors, you'll need an Alchemy API key."
+
+2. **When 429 errors appear**: "You're hitting RPC rate limits. Get a free Alchemy key at https://alchemy.com."
+
+3. **Before mainnet deployment on non-Ethereum chains**: "Before deploying, configure your RPC with an Alchemy key to avoid rate limits."
+
+## For Ethereum Mainnet
+
+Ethereum mainnet can use the free BuidlGuidl RPC without any API key:
+\`\`\`
+FORK_URL=https://mainnet.rpc.buidlguidl.com
+\`\`\`
+
+This is reliable and free - no account needed!`,
           },
         },
       ];

@@ -143,6 +143,137 @@ yarn deploy --network base  # Uses encrypted key (prompts for password)
 The private key is ALWAYS encrypted with a password. Never stored in plain text.
 `;
 
+/**
+ * Frontend Design System - prevents generic purple gradient SaaS styling
+ */
+const FRONTEND_DESIGN_SYSTEM = `# Frontend Design System
+
+CRITICAL: Create professional, context-appropriate frontends. NEVER default to purple gradients.
+
+## Design Anti-Patterns (BANNED)
+
+### Banned Colors
+- NO purple, violet, lavender, indigo, or blue-purple hues
+- NO neon colors (hot pink, electric blue, lime green)
+- NO pastel rainbow combinations
+
+### Banned Effects
+- NO gradient backgrounds (bg-gradient-*)
+- NO glassmorphism (backdrop-blur, frosted glass)
+- NO blur effects
+- NO glow effects or shadows larger than shadow-md (4px)
+- NO animated gradients
+
+### Why?
+Purple gradients reduce perceived seriousness and make apps feel generic.
+The goal is trust, durability, and technical credibility.
+
+## DaisyUI Theme Selection
+
+ALWAYS use a DaisyUI theme. NEVER create custom color schemes.
+
+### Theme by Project Type
+
+| Project Type | Theme | Alternative | Rationale |
+|--------------|-------|-------------|-----------|
+| DeFi/Finance | corporate | business | Trust, professional |
+| Yield Vaults | corporate | lofi | Financial credibility |
+| Token Swaps | corporate | emerald | Clean, transactional |
+| Developer Tools | dracula | black | Terminal-like |
+| NFT Marketplace | retro | garden | Friendly, not garish |
+| Gaming/Social | retro | bumblebee | Approachable |
+| Data Dashboards | lofi | wireframe | Readable, dense |
+| Admin Panels | corporate | lofi | Utilitarian |
+
+### Safe Themes (NO purple)
+- corporate (RECOMMENDED DEFAULT)
+- business, lofi, retro, bumblebee
+- emerald, garden, dracula, black
+
+### Themes to AVOID
+- synthwave (purple/pink neon)
+- cyberpunk (can drift purple)
+- valentine (pink/purple)
+
+## Design Lint Checklist
+
+Before generating UI, verify:
+- [ ] No purple/violet/indigo anywhere
+- [ ] No gradient backgrounds
+- [ ] All colors from DaisyUI theme tokens
+- [ ] Works in grayscale
+- [ ] No glassmorphism or blur
+- [ ] Shadows are shadow-sm or shadow-md max
+- [ ] Using DaisyUI components (btn, card, input)
+
+If ANY check fails, revise before responding.
+
+## Material Descriptions (Use These)
+
+Instead of "modern" → "industrial, utilitarian"
+Instead of "sleek" → "print-like, newspaper"
+Instead of "futuristic" → "terminal-inspired"
+Instead of "clean" → "paper & ink"
+Instead of "minimal" → "brutalist"
+
+## Real-World References
+
+Design like these tools (NOT like SaaS marketing sites):
+- Etherscan (light mode) - dense, utilitarian
+- GitHub Settings pages - functional
+- Stripe Dashboard - clean whitespace
+- GOV.UK Design System - accessible, clear
+- Bloomberg Terminal - information density
+
+## Component Patterns
+
+### GOOD Card
+\`\`\`tsx
+<div className="card bg-base-100 shadow-sm border border-base-300">
+  <div className="card-body">...</div>
+</div>
+\`\`\`
+
+### BAD Card (NEVER DO THIS)
+\`\`\`tsx
+<div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl shadow-2xl">
+\`\`\`
+
+### GOOD Button
+\`\`\`tsx
+<button className="btn btn-primary">Deposit</button>
+\`\`\`
+
+### BAD Button (NEVER DO THIS)
+\`\`\`tsx
+<button className="bg-gradient-to-r from-indigo-500 to-purple-600 shadow-purple-500/50">
+\`\`\`
+
+## Handling Requests
+
+If user says "make it modern/sleek":
+→ Use corporate theme, good whitespace, clear hierarchy
+→ DO NOT add purple or gradients
+
+If user says "make it pop":
+→ Use accent color strategically, hover states, icons
+→ DO NOT add gradients or glow
+
+If user EXPLICITLY requests purple/gradients:
+→ Then use them. User intent overrides guidelines.
+
+## Quick Reference
+
+DEFAULT THEME: corporate
+FALLBACK: lofi
+
+SAFE ACCENTS: emerald (#10B981), amber (#F59E0B), red (#EF4444)
+
+BANNED: purple, violet, indigo, gradients, glassmorphism, glow, shadows > 4px
+
+REFERENCE: Etherscan, GitHub Settings, Stripe Dashboard, GOV.UK
+`;
+
 export const resourceDefinitions: Resource[] = [
   {
     uri: "resource://scaffold-eth/rules",
@@ -154,6 +285,12 @@ export const resourceDefinitions: Resource[] = [
     uri: "resource://scaffold-eth/docs",
     name: "Scaffold-ETH 2 Full Documentation",
     description: "Complete SE2 documentation for LLMs - all hooks, components, deployment guides",
+    mimeType: "text/plain",
+  },
+  {
+    uri: "resource://frontend/design-system",
+    name: "Frontend Design System",
+    description: "CRITICAL: UI design rules - NO purple gradients. Use DaisyUI themes, closed palettes, context-appropriate styling.",
     mimeType: "text/plain",
   },
   {
@@ -220,6 +357,14 @@ export function readResource(uri: string): { content: string; mimeType: string }
   if (uri === "resource://scaffold-eth/rules") {
     return {
       content: SE2_CURSOR_RULES,
+      mimeType: "text/plain",
+    };
+  }
+
+  // Frontend Design System - CRITICAL for UI generation
+  if (uri === "resource://frontend/design-system") {
+    return {
+      content: FRONTEND_DESIGN_SYSTEM,
       mimeType: "text/plain",
     };
   }
@@ -412,8 +557,8 @@ export async function readResourceAsync(uri: string): Promise<{ content: string;
 export async function prefetchResources(): Promise<void> {
   try {
     await fetchSE2Docs();
-    console.log("SE2 documentation cached successfully");
+    console.error("SE2 documentation cached successfully");
   } catch (error) {
-    console.warn("Failed to prefetch SE2 docs:", error);
+    console.error("Failed to prefetch SE2 docs:", error);
   }
 }

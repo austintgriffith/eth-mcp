@@ -18,7 +18,7 @@ export interface Lesson {
   relatedDocs?: string[]; // Links to docs
 }
 
-export type Category = "tokens" | "math" | "automation" | "security" | "vaults" | "defi";
+export type Category = "tokens" | "math" | "automation" | "security" | "vaults" | "defi" | "scaffold-eth";
 
 export const CATEGORY_INFO: Record<Category, { name: string; description: string }> = {
   tokens: {
@@ -44,6 +44,10 @@ export const CATEGORY_INFO: Record<Category, { name: string; description: string
   defi: {
     name: "DeFi Integration",
     description: "MEV, slippage, liquidity, and protocol composability",
+  },
+  "scaffold-eth": {
+    name: "Scaffold-ETH Workflow",
+    description: "Debug UI, external contracts, and SE2 development patterns",
   },
 };
 
@@ -987,6 +991,61 @@ contract BuggyVault {
     severity: "high",
     keywords: ["deploy", "test", "mainnet", "bug", "immutable", "permanent"],
     relatedDocs: ["docs/WEB3_DEVELOPMENT_GUIDE.md", "docs/DEPLOYMENT_WORKFLOW.md"],
+  },
+
+  // ============================================
+  // SCAFFOLD-ETH
+  // ============================================
+  {
+    id: "external-contracts",
+    category: "scaffold-eth",
+    question: "Are you integrating with external contracts? Have you configured them for the debug UI?",
+    short: "Debug UI only shows YOUR deployed contracts. External protocols need explicit configuration.",
+    explanation: `When building projects that interact with external contracts (USDC, Aave, Uniswap, etc.), the Scaffold-ETH debug UI won't show them by default.
+
+The debug UI only displays:
+1. Contracts YOU deployed (from deployedContracts.ts)
+2. Contracts you EXPLICITLY configure (in externalContracts.ts)
+
+For testing and debugging, you want to interact with external contracts too!
+
+Configuration file: packages/nextjs/contracts/externalContracts.ts
+
+Use the stack_configureExternalContracts tool to automatically:
+- Look up addresses from the registry
+- Add bundled ABIs (ERC20, ERC4626, Aave, Uniswap)
+- Create entries for both local fork (31337) and mainnet
+
+This is important because during local development, you're on chainId 31337 (the fork), but the contract addresses are from mainnet.`,
+    wrongExample: `// User builds a USDC vault without configuring USDC
+// Result: Debug UI only shows their vault contract
+// They can't test USDC.approve() or USDC.balanceOf() from the UI!
+
+// Missing file: packages/nextjs/contracts/externalContracts.ts
+// Or file exists but is empty`,
+    rightExample: `// After running stack_configureExternalContracts with USDC:
+// packages/nextjs/contracts/externalContracts.ts
+
+const externalContracts = {
+  31337: {  // Local fork
+    USDC: {
+      address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      abi: [...ERC20_ABI],
+    },
+  },
+  8453: {  // Base mainnet  
+    USDC: {
+      address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      abi: [...ERC20_ABI],
+    },
+  },
+} as const;
+
+// Now debug UI shows USDC alongside user's contracts!
+// Can test approve, transfer, balanceOf directly in browser`,
+    severity: "medium",
+    keywords: ["external", "usdc", "aave", "uniswap", "debug", "ui", "scaffold", "contracts", "integrate", "protocol"],
+    relatedDocs: ["docs/SCAFFOLD_ETH_REFERENCE.md"],
   },
 ];
 

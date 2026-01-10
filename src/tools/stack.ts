@@ -10,6 +10,8 @@ import * as fs from "fs/promises";
 import { stateManager } from "../state.js";
 import { processManager } from "../process-manager.js";
 import { isCommandAllowed } from "../safety.js";
+import { getAbiByType, isValidContractType, CONTRACT_TYPES, type ContractType } from "../abis/index.js";
+import { CHAIN_BY_NAME, type ChainAddresses } from "../addresses/index.js";
 
 const execAsync = promisify(exec);
 
@@ -75,6 +77,7 @@ bracket_spacing = true
     version: "0.0.1",
     scripts: {
       account: "node script/ListAccount.js",
+      generate: "node script/GenerateAccount.js",
       chain: "anvil --config-out localhost.json",
       compile: "forge compile",
       deploy: "forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast",
@@ -87,6 +90,7 @@ bracket_spacing = true
       verify: "forge verify-contract",
     },
     dependencies: {
+      "@inquirer/password": "~2.2.0",
       dotenv: "~16.3.1",
       envfile: "~6.18.0",
       ethers: "~5.7.2",
@@ -213,6 +217,132 @@ out/
 broadcast/
 `;
   await fs.writeFile(path.join(foundryPath, ".gitignore"), gitignore);
+
+  // Create GenerateAccount.js - generates a new encrypted deployer wallet
+  const generateAccountJs = `const { ethers } = require("ethers");
+const { parse, stringify } = require("envfile");
+const fs = require("fs");
+const password = require("@inquirer/password").default;
+
+const envFilePath = "./.env";
+
+const getValidatedPassword = async () => {
+  while (true) {
+    const pass = await password({ message: "Enter a password to encrypt your private key:" });
+    const confirmation = await password({ message: "Confirm password:" });
+
+    if (pass === confirmation) {
+      return pass;
+    }
+    console.log("❌ Passwords don't match. Please try again.");
+  }
+};
+
+const setNewEnvConfig = async (existingEnvConfig = {}) => {
+  console.log("👛 Generating new Wallet\\n");
+  const randomWallet = ethers.Wallet.createRandom();
+
+  const pass = await getValidatedPassword();
+  const encryptedJson = await randomWallet.encrypt(pass);
+
+  const newEnvConfig = {
+    ...existingEnvConfig,
+    DEPLOYER_PRIVATE_KEY_ENCRYPTED: encryptedJson,
+  };
+
+  // Store in .env
+  fs.writeFileSync(envFilePath, stringify(newEnvConfig));
+  console.log("\\n📄 Encrypted Private Key saved to packages/foundry/.env file");
+  console.log("🪄 Generated wallet address:", randomWallet.address, "\\n");
+  console.log("⚠️ Make sure to remember your password! You'll need it to decrypt the private key.");
+};
+
+async function main() {
+  if (!fs.existsSync(envFilePath)) {
+    // No .env file yet.
+    await setNewEnvConfig();
+    return;
+  }
+
+  const existingEnvConfig = parse(fs.readFileSync(envFilePath).toString());
+  if (existingEnvConfig.DEPLOYER_PRIVATE_KEY_ENCRYPTED) {
+    console.log("⚠️ You already have a deployer account. Check the packages/foundry/.env file");
+    return;
+  }
+
+  await setNewEnvConfig(existingEnvConfig);
+}
+
+main().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});
+`;
+  await fs.writeFile(
+    path.join(foundryPath, "script", "GenerateAccount.js"),
+    generateAccountJs
+  );
+
+  // Create ListAccount.js - displays deployer address and balances
+  const listAccountJs = `require("dotenv").config();
+const { ethers } = require("ethers");
+const QRCode = require("qrcode");
+const password = require("@inquirer/password").default;
+
+// Network configurations for balance checking
+const networks = {
+  mainnet: { url: "https://eth.llamarpc.com", name: "Ethereum Mainnet" },
+  base: { url: "https://mainnet.base.org", name: "Base" },
+  optimism: { url: "https://mainnet.optimism.io", name: "Optimism" },
+  arbitrum: { url: "https://arb1.arbitrum.io/rpc", name: "Arbitrum One" },
+  polygon: { url: "https://polygon-rpc.com", name: "Polygon" },
+};
+
+async function main() {
+  const encryptedKey = process.env.DEPLOYER_PRIVATE_KEY_ENCRYPTED;
+
+  if (!encryptedKey) {
+    console.log("🚫️ You don't have a deployer account. Run \`yarn generate\` first");
+    return;
+  }
+
+  const pass = await password({ message: "Enter your password to decrypt the private key:" });
+  let wallet;
+  try {
+    wallet = await ethers.Wallet.fromEncryptedJson(encryptedKey, pass);
+  } catch (e) {
+    console.log("❌ Failed to decrypt private key. Wrong password?");
+    return;
+  }
+
+  const address = wallet.address;
+  console.log(await QRCode.toString(address, { type: "terminal", small: true }));
+  console.log("Public address:", address, "\\n");
+
+  // Check balance on each network
+  for (const [networkId, network] of Object.entries(networks)) {
+    try {
+      const provider = new ethers.providers.JsonRpcProvider(network.url);
+      const balance = await provider.getBalance(address);
+      console.log("--", network.name, "-- 📡");
+      console.log("   balance:", ethers.utils.formatEther(balance), "ETH");
+      const nonce = await provider.getTransactionCount(address);
+      console.log("   nonce:", nonce);
+    } catch (e) {
+      console.log("Can't connect to network", network.name);
+    }
+  }
+}
+
+main().catch(error => {
+  console.error(error);
+  process.exitCode = 1;
+});
+`;
+  await fs.writeFile(
+    path.join(foundryPath, "script", "ListAccount.js"),
+    listAccountJs
+  );
 }
 
 export const stackTools = {
@@ -474,6 +604,24 @@ CHAIN_ID=${chainConfig.chainId}
         } catch (err) {
           // Config file might not exist yet or have different format
           console.error("Could not update scaffold.config.ts:", err);
+        }
+
+        // Update root package.json to fix foundry script mappings
+        const rootPackageJsonPath = path.join(workspacePath, "package.json");
+        try {
+          const rootPkgContent = await fs.readFile(rootPackageJsonPath, "utf-8");
+          const rootPkg = JSON.parse(rootPkgContent);
+          
+          // Ensure generate calls foundry:generate (not foundry:account)
+          rootPkg.scripts = rootPkg.scripts || {};
+          rootPkg.scripts["generate"] = "yarn foundry:generate";
+          rootPkg.scripts["foundry:generate"] = "yarn workspace @se-2/foundry generate";
+          rootPkg.scripts["foundry:account"] = "yarn workspace @se-2/foundry account";
+          rootPkg.scripts["account"] = "yarn foundry:account";
+          
+          await fs.writeFile(rootPackageJsonPath, JSON.stringify(rootPkg, null, 2));
+        } catch (err) {
+          console.error("Could not update root package.json:", err);
         }
 
         // Update state
@@ -815,6 +963,15 @@ After generating, run stack_checkAccount to see the deployer address, then fund 
           timeout: 60000,
         });
 
+        // Get chain from state to provide chain-specific funding guidance
+        const chain = state.config?.chain || "unknown";
+        const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
+        const fundingAmount = isL2 
+          ? "0.001-0.002 ETH (L2s are cheap - deployments cost <$1!)"
+          : chain === "mainnet" 
+            ? "0.01-0.05 ETH (mainnet is expensive - $20-100)"
+            : "appropriate ETH for your chain (L2s: ~0.001 ETH, mainnet: ~0.01-0.05 ETH)";
+
         return {
           success: true,
           message: "Deployer account created successfully",
@@ -822,8 +979,8 @@ After generating, run stack_checkAccount to see the deployer address, then fund 
           note: stderr || undefined,
           nextSteps: [
             "Run stack_checkAccount to see your deployer address",
-            "Fund the deployer address with 0.01-0.1 ETH",
-            "Then run: yarn deploy --network <chain>",
+            `Fund the deployer address with ${fundingAmount}`,
+            `Then run: yarn deploy --network ${chain}`,
           ],
         };
       } catch (err) {
@@ -879,6 +1036,15 @@ Note: May prompt for the encryption password set during yarn generate.`,
         const addressMatch = stdout.match(/0x[a-fA-F0-9]{40}/);
         const address = addressMatch ? addressMatch[0] : null;
 
+        // Get chain from state to provide chain-specific funding guidance
+        const chain = state.config?.chain || "unknown";
+        const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
+        const fundingAmount = isL2 
+          ? "0.001-0.002 ETH (L2s are cheap - deployments cost <$1!)"
+          : chain === "mainnet" 
+            ? "0.01-0.05 ETH (mainnet is expensive - $20-100)"
+            : "appropriate ETH for your chain (L2s: ~0.001 ETH, mainnet: ~0.01-0.05 ETH)";
+
         return {
           success: true,
           address,
@@ -886,8 +1052,8 @@ Note: May prompt for the encryption password set during yarn generate.`,
           note: stderr || undefined,
           nextSteps: address
             ? [
-                `Fund ${address} with 0.01-0.1 ETH`,
-                "Then run: yarn deploy --network <chain>",
+                `Fund ${address} with ${fundingAmount}`,
+                `Then run: yarn deploy --network ${chain}`,
               ]
             : ["Run stack_generateAccount first to create a deployer account"],
         };
@@ -909,6 +1075,255 @@ Note: May prompt for the encryption password set during yarn generate.`,
           hint: "You can also run 'yarn account' manually in the project directory",
         };
       }
+    },
+  },
+
+  /**
+   * stack.configureExternalContracts - Configure external contracts for debug UI
+   */
+  configureExternalContracts: {
+    name: "stack_configureExternalContracts",
+    description: `Configure external contracts for the Scaffold-ETH debug UI.
+
+Adds contract addresses and ABIs to packages/nextjs/contracts/externalContracts.ts
+so you can interact with external protocols (USDC, Aave, Uniswap) in the debug UI.
+
+WHEN TO USE: When building projects that interact with external contracts:
+- Token interactions: "build a USDC vault" → add USDC with type: "ERC20"
+- DeFi integrations: "integrate with Aave" → add Aave pool with type: "AaveV3Pool"
+- DEX swaps: "swap on Uniswap" → add router with type: "UniswapV3Router"
+
+BUNDLED ABIs (no external fetch needed):
+- ERC20: Standard tokens (USDC, DAI, WETH, etc.)
+- ERC721: NFT contracts
+- ERC4626: Tokenized vaults
+- AaveV3Pool: Aave lending pool
+- AaveV3PoolDataProvider: Aave data queries
+- UniswapV3Router: Uniswap V3 swaps
+- UniswapV3Quoter: Swap quotes
+- UniswapV2Router: V2-style DEX swaps
+
+If a contract type is not bundled and no ABI is provided:
+- Try using Blockscout MCP to fetch the ABI
+- Or instruct the user to get the ABI from Etherscan/Blockscout manually
+
+CHAIN IDs: Adds entries for BOTH 31337 (local fork) AND the real chainId,
+so contracts work during local dev and after mainnet deployment.`,
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        contracts: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+                description: "Display name for the contract (e.g., 'USDC', 'AavePool')",
+              },
+              type: {
+                type: "string",
+                description: "Contract type for bundled ABI: ERC20, ERC721, ERC4626, AaveV3Pool, AaveV3PoolDataProvider, UniswapV3Router, UniswapV3Quoter, UniswapV2Router",
+              },
+              address: {
+                type: "string",
+                description: "Contract address. If not provided, will look up from eth-mcp registry using name and chain.",
+              },
+              abi: {
+                type: "array",
+                description: "Custom ABI array. Only needed if type is not provided or contract is not in bundled ABIs.",
+              },
+            },
+            required: ["name"],
+          },
+          description: "List of external contracts to configure",
+        },
+        chain: {
+          type: "string",
+          description: "Chain name for address lookup (mainnet, base, optimism, arbitrum, polygon). Defaults to project's configured chain.",
+        },
+      },
+      required: ["contracts"],
+    },
+    handler: async (args: {
+      contracts: Array<{
+        name: string;
+        type?: string;
+        address?: string;
+        abi?: unknown[];
+      }>;
+      chain?: string;
+    }) => {
+      const state = stateManager.getState();
+
+      if (!state.initialized || !state.workspacePath) {
+        return { success: false, error: "Stack not initialized. Run stack_init first." };
+      }
+
+      // Get chain config
+      const chainName = args.chain || state.config?.chain || "mainnet";
+      const chainData = CHAIN_BY_NAME[chainName.toLowerCase()] as ChainAddresses | undefined;
+      if (!chainData) {
+        return {
+          success: false,
+          error: `Unknown chain: ${chainName}. Supported: mainnet, base, optimism, arbitrum, polygon`,
+        };
+      }
+
+      const realChainId = chainData.chainId;
+      const forkChainId = 31337; // Local Anvil fork always uses 31337
+
+      const configured: Array<{ name: string; address: string; abiSource: string }> = [];
+      const needsManualAbi: Array<{ name: string; address?: string; reason: string }> = [];
+
+      // Build contract entries
+      const contractEntries: Record<string, { address: string; abi: unknown[] }> = {};
+
+      for (const contract of args.contracts) {
+        let address = contract.address;
+        let abi: unknown[] | null = null;
+        let abiSource = "custom";
+
+        // Try to get address from registry if not provided
+        if (!address) {
+          // Check tokens first
+          const token = chainData.tokens[contract.name];
+          if (token) {
+            address = token.address;
+          } else {
+            // Check protocol addresses
+            for (const [protocolName, protocolAddresses] of Object.entries(chainData.protocols)) {
+              const matchingKey = Object.keys(protocolAddresses).find(
+                (key) => key.toLowerCase() === contract.name.toLowerCase()
+              );
+              if (matchingKey) {
+                address = (protocolAddresses as Record<string, string>)[matchingKey];
+                break;
+              }
+            }
+          }
+        }
+
+        // If still no address, we can't configure this contract
+        if (!address) {
+          needsManualAbi.push({
+            name: contract.name,
+            reason: `Address not found in registry. Please provide the address explicitly.`,
+          });
+          continue;
+        }
+
+        // Get ABI
+        if (contract.abi && Array.isArray(contract.abi) && contract.abi.length > 0) {
+          abi = contract.abi;
+          abiSource = "provided";
+        } else if (contract.type && isValidContractType(contract.type)) {
+          const bundledAbi = getAbiByType(contract.type as ContractType);
+          if (bundledAbi) {
+            abi = bundledAbi as unknown[];
+            abiSource = `bundled (${contract.type})`;
+          }
+        }
+
+        // If no ABI, add to needs manual list
+        if (!abi) {
+          const availableTypes = Object.keys(CONTRACT_TYPES).join(", ");
+          needsManualAbi.push({
+            name: contract.name,
+            address,
+            reason: `No bundled ABI found. Either provide a 'type' (${availableTypes}), provide a custom 'abi', or fetch from Blockscout/Etherscan.`,
+          });
+          continue;
+        }
+
+        contractEntries[contract.name] = { address, abi };
+        configured.push({ name: contract.name, address, abiSource });
+      }
+
+      // If we have contracts to configure, write the file
+      if (Object.keys(contractEntries).length > 0) {
+        const externalContractsPath = path.join(
+          state.workspacePath,
+          "packages",
+          "nextjs",
+          "contracts",
+          "externalContracts.ts"
+        );
+
+        // Build the externalContracts object for both chain IDs
+        const buildChainEntry = (chainId: number) => {
+          const entries = Object.entries(contractEntries)
+            .map(([name, { address, abi }]) => {
+              return `    ${name}: {
+      address: "${address}",
+      abi: ${JSON.stringify(abi, null, 6).replace(/\n/g, "\n      ")},
+    }`;
+            })
+            .join(",\n");
+          return `  ${chainId}: {\n${entries}\n  }`;
+        };
+
+        const fileContent = `import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
+
+/**
+ * External contracts configuration
+ * 
+ * These are external protocol contracts (not deployed by you) that you want
+ * to interact with in the debug UI.
+ * 
+ * Generated by eth-mcp stack_configureExternalContracts
+ * Chain: ${chainName} (${realChainId})
+ */
+const externalContracts = {
+${buildChainEntry(forkChainId)},
+${buildChainEntry(realChainId)},
+} as const;
+
+export default externalContracts satisfies GenericContractsDeclaration;
+`;
+
+        try {
+          // Ensure the contracts directory exists
+          await fs.mkdir(path.dirname(externalContractsPath), { recursive: true });
+          await fs.writeFile(externalContractsPath, fileContent);
+        } catch (err) {
+          return {
+            success: false,
+            error: `Failed to write externalContracts.ts: ${err instanceof Error ? err.message : String(err)}`,
+          };
+        }
+      }
+
+      // Build response
+      const response: {
+        success: boolean;
+        message: string;
+        configured: typeof configured;
+        needsManualAbi?: typeof needsManualAbi;
+        instructions?: string;
+        filePath?: string;
+      } = {
+        success: configured.length > 0,
+        message:
+          configured.length > 0
+            ? `Configured ${configured.length} external contract(s) for ${chainName}`
+            : "No contracts were configured",
+        configured,
+        filePath: configured.length > 0
+          ? "packages/nextjs/contracts/externalContracts.ts"
+          : undefined,
+      };
+
+      if (needsManualAbi.length > 0) {
+        response.needsManualAbi = needsManualAbi;
+        response.instructions = `For contracts without bundled ABIs, you can:
+1. Use Blockscout MCP: get_contract_abi({ chain_id: ${realChainId}, address: "0x..." })
+2. Get from Etherscan: Go to the contract address, click "Contract" tab, copy ABI
+3. Search the web for "[contract name] ABI"
+Then call this tool again with the abi parameter.`;
+      }
+
+      return response;
     },
   },
 };

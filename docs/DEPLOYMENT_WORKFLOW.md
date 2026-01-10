@@ -102,7 +102,7 @@ Creates a new **ENCRYPTED** deployer account:
 
 **Your private key is NEVER stored in plain text.**
 
-### Step 6: Check Deployer Address
+### Step 6: Check Deployer Address & Fund It
 
 ```bash
 yarn account
@@ -110,7 +110,54 @@ yarn account
 
 Shows your deployer address and balances:
 - Copy the address
-- Fund it with 0.01-0.1 ETH on the target chain
+- Fund it based on your target chain (see table below)
+
+#### How Much ETH Do I Need?
+
+**L2s are CHEAP!** Don't overfund based on mainnet prices.
+
+| Chain | Recommended Funding | Typical Deploy Cost | Notes |
+|-------|---------------------|---------------------|-------|
+| **Ethereum Mainnet** | 0.01-0.05 ETH | $20-100 | Expensive - varies with gas price |
+| **Base** | 0.0005-0.002 ETH | $0.01-0.50 | Very cheap! |
+| **Optimism** | 0.0005-0.002 ETH | $0.01-0.50 | Very cheap! |
+| **Arbitrum** | 0.001-0.005 ETH | $0.10-1.00 | Slightly higher than OP/Base |
+| **Polygon** | 0.1-1 MATIC | $0.01-0.10 | Uses MATIC, not ETH |
+
+**Real example**: A complex vault contract deployment on Base costs ~0.000003 ETH (~$0.01). You could deploy 300+ contracts with just 0.001 ETH!
+
+### Step 6.5: Configure Production RPC (Non-Ethereum Chains)
+
+**IMPORTANT**: For any chain except Ethereum mainnet, you need a reliable RPC endpoint. Public RPCs like `mainnet.base.org` will fail with 429 rate limit errors.
+
+**Get a free API key from:**
+- Alchemy: https://alchemy.com (recommended)
+- Infura: https://infura.io
+- QuickNode: https://quicknode.com
+
+**Configure the RPC in two places:**
+
+1. **packages/foundry/.env** (for deployment):
+```bash
+FORK_URL=https://base-mainnet.g.alchemy.com/v2/YOUR_API_KEY
+CHAIN_ID=8453
+```
+
+2. **packages/nextjs/.env.local** (for frontend - copy from .env.example first):
+```bash
+NEXT_PUBLIC_ALCHEMY_API_KEY=YOUR_API_KEY
+```
+
+**RPC URLs by chain (Alchemy format):**
+| Chain | URL |
+|-------|-----|
+| Ethereum | `https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY` |
+| Base | `https://base-mainnet.g.alchemy.com/v2/YOUR_KEY` |
+| Optimism | `https://opt-mainnet.g.alchemy.com/v2/YOUR_KEY` |
+| Arbitrum | `https://arb-mainnet.g.alchemy.com/v2/YOUR_KEY` |
+| Polygon | `https://polygon-mainnet.g.alchemy.com/v2/YOUR_KEY` |
+
+**Note**: Ethereum mainnet can use the free BuidlGuidl RPC (`mainnet.rpc.buidlguidl.com`) without an API key.
 
 ### Step 7: Deploy to Mainnet
 
@@ -186,12 +233,28 @@ When user says "build me an app on Base":
 
 ### For Mainnet Deployment Instructions
 
-ALWAYS say:
-> "To deploy to mainnet:
+ALWAYS give chain-specific funding amounts:
+
+**For L2s (Base, Optimism, Arbitrum):**
+> "To deploy to [chain]:
 > 1. Run `yarn generate` to create an encrypted deployer account
 > 2. Run `yarn account` to see your deployer address  
-> 3. Fund that address with 0.01-0.1 ETH
-> 4. Run `yarn deploy --network base`"
+> 3. Fund that address with **0.001-0.002 ETH** (L2 deployments are very cheap - typically <$1)
+> 4. Run `yarn deploy --network [chain]`"
+
+**For Ethereum Mainnet:**
+> "To deploy to Ethereum mainnet:
+> 1. Run `yarn generate` to create an encrypted deployer account
+> 2. Run `yarn account` to see your deployer address  
+> 3. Fund that address with **0.01-0.05 ETH** (mainnet is expensive - $20-100 depending on gas)
+> 4. Run `yarn deploy --network mainnet`"
+
+**IMPORTANT**: Don't tell L2 users to fund with "0.01-0.1 ETH" - that's 10-100x more than needed!
+
+**For non-Ethereum chains (Base, Optimism, etc.)**, also say:
+> "You'll also need a reliable RPC endpoint. Get a free API key from Alchemy (https://alchemy.com) and add it to:
+> - `packages/foundry/.env`: `FORK_URL=https://base-mainnet.g.alchemy.com/v2/YOUR_KEY`
+> - `packages/nextjs/.env.local`: `NEXT_PUBLIC_ALCHEMY_API_KEY=YOUR_KEY`"
 
 NEVER suggest putting private keys in .env files.
 
@@ -213,7 +276,9 @@ That's why you test on the fork first! The fork has real mainnet state. If your 
 
 ### "Don't I need testnet ETH?"
 
-No. Fork development costs nothing. When ready for mainnet, you fund your deployer with real ETH (usually 0.01-0.1 ETH is enough).
+No. Fork development costs nothing. When ready for mainnet, you fund your deployer with real ETH:
+- **L2s (Base, Optimism, Arbitrum)**: 0.001 ETH is plenty (~$3, enough for many deploys)
+- **Ethereum mainnet**: 0.01-0.05 ETH ($30-150, mainnet is expensive)
 
 ### "What about contract verification?"
 
@@ -243,14 +308,24 @@ Yes, but it's not recommended. Forks are strictly better for development. Only e
                             ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │                   PRODUCTION (COSTS GAS)                          │
-│  ┌────────────┐    ┌────────────┐    ┌────────────┐    ┌───────┐ │
-│  │  yarn      │ -> │  yarn      │ -> │  Fund with │ -> │ yarn  │ │
-│  │  generate  │    │  account   │    │  0.01 ETH  │    │ deploy│ │
-│  │ (encrypted)│    │ (get addr) │    │            │    │--net..│ │
-│  └────────────┘    └────────────┘    └────────────┘    └───────┘ │
+│  ┌────────────┐    ┌────────────┐    ┌─────────────────────────┐ │
+│  │  yarn      │ -> │  yarn      │ -> │  Fund deployer:         │ │
+│  │  generate  │    │  account   │    │  L2: 0.001 ETH (~$3)    │ │
+│  │ (encrypted)│    │ (get addr) │    │  Mainnet: 0.01-0.05 ETH │ │
+│  └────────────┘    └────────────┘    └─────────────────────────┘ │
+│         │                                                         │
+│         ▼                                                         │
+│  ┌────────────────────────────────┐    ┌───────────────────────┐ │
+│  │  Configure RPC (non-ETH only)  │ -> │  yarn deploy          │ │
+│  │  Get Alchemy key, update .env  │    │  --network base       │ │
+│  └────────────────────────────────┘    └───────────────────────┘ │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
+**L2s are cheap!** Base/Optimism/Arbitrum deployments cost <$1. Don't overfund!
+
 **Private keys are NEVER stored in plain text. Always encrypted with your password.**
+
+**RPC keys needed for non-Ethereum chains (Base, Optimism, etc.) - get free at alchemy.com**
 
 This is the way.
