@@ -490,6 +490,17 @@ onlyLocalBurnerWallet: true,  // DEFAULT - LEAVE IT ALONE
 - Enables burner wallets on local fork (chainId 31337)
 - Requires real wallets on mainnet
 
+### AI Behavior Rule
+
+When deploying to production or changing config files:
+
+1. **Only change what was specifically requested** - nothing else
+2. **Do NOT "helpfully" change other settings** - even if they seem related
+3. **If a setting seems like it should change for production, ASK FIRST**
+4. **The name `onlyLocalBurnerWallet` is a trap** - it means the OPPOSITE of what it sounds like
+
+> "The setting name seemed 'obvious' so I didn't verify - which is exactly when mistakes happen."
+
 ### What This Means for AI Agents
 
 When testing via browser automation (e.g., cursor-browser-extension MCP):

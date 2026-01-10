@@ -271,6 +271,16 @@ FORK_URL=${chainConfig.rpcUrl}
             /pollingInterval:\s*\d+/,
             `pollingInterval: ${pollingInterval}`
           );
+
+          // CRITICAL: Ensure onlyLocalBurnerWallet is NEVER set to false
+          // This is a common AI mistake - the name is counterintuitive
+          // true = safe (burner only on local), false = DANGEROUS (burner on mainnet)
+          if (configContent.includes("onlyLocalBurnerWallet: false")) {
+            configContent = configContent.replace(
+              /onlyLocalBurnerWallet:\s*false/,
+              "onlyLocalBurnerWallet: true"
+            );
+          }
           
           await fs.writeFile(scaffoldConfigPath, configContent);
         } catch (err) {
@@ -289,6 +299,24 @@ FORK_URL=${chainConfig.rpcUrl}
 description:
 globs:
 alwaysApply: true
+---
+
+## PROTECTED SETTINGS - DO NOT MODIFY
+
+These settings have correct defaults. Changing them causes serious problems.
+**If you think any of these need changing, STOP and ask the user first.**
+
+| Setting | File | Correct Value | Why |
+|---------|------|---------------|-----|
+| onlyLocalBurnerWallet | scaffold.config.ts | true | true=safe (burner only on localhost), false=DANGEROUS (exposes burner wallet on mainnet!) |
+
+## AI BEHAVIOR RULES
+
+1. Only change the specific thing asked. Nothing else.
+2. If you think something else needs changing, STOP and ask first.
+3. Do NOT change config settings without explaining what they do.
+4. When a setting name seems "obvious", that's when you verify - obvious names are often wrong.
+
 ---
 
 This codebase contains Scaffold-ETH 2 (SE-2) with Foundry, everything you need to build dApps on Ethereum. Its tech stack is NextJS, RainbowKit, Wagmi and Typescript for the frontend, and Foundry (Forge, Anvil) for smart contract development.
