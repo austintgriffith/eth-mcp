@@ -88,6 +88,23 @@ Deploys to your LOCAL fork:
 - Test token transfers with real token contracts
 - All using REAL mainnet state, but locally
 
+### Burner Wallets: Frictionless Local Testing
+
+When running on a local fork (chainId 31337), Scaffold-ETH uses **burner wallets** automatically:
+
+- **Auto-connected**: You have a `connectedAddress` immediately - no wallet popup
+- **Fund from faucet**: Click the faucet button to get local ETH instantly
+- **No transaction popups**: All transactions sign automatically
+
+This means you (or an AI agent) can:
+
+1. Open Chrome to `http://localhost:3000`
+2. Click the faucet to fund the burner wallet
+3. Interact with the app - click buttons, submit forms, test flows
+4. All without a single wallet popup or confirmation dialog
+
+**When you deploy to mainnet**, users connect real wallets (MetaMask, etc.) and confirm transactions as expected.
+
 ### Step 5: Generate Deployer (When Ready)
 
 ```bash

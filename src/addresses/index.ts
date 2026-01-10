@@ -785,6 +785,249 @@ export const CHAIN_BY_NAME: Record<string, ChainAddresses> = {
 };
 
 // ============================================
+// TOKEN WHALES - For funding test wallets on forks
+// ============================================
+
+/**
+ * Whale address information for impersonation on Anvil forks.
+ * Protocol contracts are preferred over EOAs - they hold funds as core function.
+ */
+export interface WhaleInfo {
+  address: string;
+  label: string;
+  protocol: string;
+  balance: string; // Approximate balance for reference
+  isContract: boolean;
+}
+
+/**
+ * Token whale registry by chain and token symbol.
+ * Use these addresses to impersonate and transfer tokens to test wallets.
+ * 
+ * Protocol contracts (Morpho, Aave) are more reliable than EOAs because:
+ * - They hold funds as part of their core function
+ * - Balances are large and stable
+ * - Less likely to randomly move funds
+ * 
+ * IMPORTANT: When impersonating contract whales, remember to:
+ * 1. Set ETH balance first (contracts have 0 ETH for gas)
+ * 2. Explicitly call anvil_impersonateAccount
+ * 3. Use --unlocked flag with cast
+ */
+export const TOKEN_WHALES: Record<number, Record<string, WhaleInfo[]>> = {
+  // ============================================
+  // BASE (Chain ID: 8453)
+  // ============================================
+  8453: {
+    USDC: [
+      {
+        address: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        label: "Morpho Blue",
+        protocol: "Morpho",
+        balance: "~131M",
+        isContract: true,
+      },
+      {
+        address: "0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB",
+        label: "Aave aBasUSDC Token",
+        protocol: "Aave",
+        balance: "~97M",
+        isContract: true,
+      },
+    ],
+    WETH: [
+      {
+        address: "0x4200000000000000000000000000000000000006",
+        label: "WETH Contract (mint directly)",
+        protocol: "Native",
+        balance: "Unlimited",
+        isContract: true,
+      },
+    ],
+    USDbC: [
+      {
+        address: "0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB",
+        label: "Aave aBasUSDbC Token",
+        protocol: "Aave",
+        balance: "~50M",
+        isContract: true,
+      },
+    ],
+  },
+
+  // ============================================
+  // ETHEREUM MAINNET (Chain ID: 1)
+  // ============================================
+  1: {
+    USDC: [
+      {
+        address: "0x37305B1cD40574E4C5Ce33f8e8306Be057fD7341",
+        label: "Sky PSM",
+        protocol: "Sky/Maker",
+        balance: "~4.1B",
+        isContract: false,
+      },
+      {
+        address: "0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c",
+        label: "Aave USDC V3",
+        protocol: "Aave",
+        balance: "~700M",
+        isContract: true,
+      },
+      {
+        address: "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb",
+        label: "Morpho Blue",
+        protocol: "Morpho",
+        balance: "~200M",
+        isContract: true,
+      },
+    ],
+    WETH: [
+      {
+        address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        label: "WETH Contract (mint directly)",
+        protocol: "Native",
+        balance: "Unlimited",
+        isContract: true,
+      },
+    ],
+    DAI: [
+      {
+        address: "0x83F20F44975D03b1b09e64809B757c47f942BEeA",
+        label: "sDAI (Savings DAI)",
+        protocol: "Sky/Maker",
+        balance: "~1B",
+        isContract: true,
+      },
+    ],
+    USDT: [
+      {
+        address: "0xF977814e90dA44bFA03b6295A0616a897441aceC",
+        label: "Binance Hot Wallet",
+        protocol: "Binance",
+        balance: "~1B",
+        isContract: false,
+      },
+    ],
+  },
+
+  // ============================================
+  // ARBITRUM (Chain ID: 42161)
+  // ============================================
+  42161: {
+    USDC: [
+      {
+        address: "0x724dc807b04555b71ed48a6896b6F41593b8C637",
+        label: "Aave Arbitrum USDCn",
+        protocol: "Aave",
+        balance: "~83M",
+        isContract: true,
+      },
+      {
+        address: "0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7",
+        label: "Hyperliquid Deposit Bridge",
+        protocol: "Hyperliquid",
+        balance: "~4B",
+        isContract: true,
+      },
+    ],
+    WETH: [
+      {
+        address: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+        label: "WETH Contract (mint directly)",
+        protocol: "Native",
+        balance: "Unlimited",
+        isContract: true,
+      },
+    ],
+    "USDC.e": [
+      {
+        address: "0x724dc807b04555b71ed48a6896b6F41593b8C637",
+        label: "Aave USDC.e",
+        protocol: "Aave",
+        balance: "~50M",
+        isContract: true,
+      },
+    ],
+  },
+
+  // ============================================
+  // OPTIMISM (Chain ID: 10)
+  // ============================================
+  10: {
+    USDC: [
+      {
+        address: "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+        label: "Aave V3 Pool",
+        protocol: "Aave",
+        balance: "~50M",
+        isContract: true,
+      },
+    ],
+    WETH: [
+      {
+        address: "0x4200000000000000000000000000000000000006",
+        label: "WETH Contract (mint directly)",
+        protocol: "Native",
+        balance: "Unlimited",
+        isContract: true,
+      },
+    ],
+    "USDC.e": [
+      {
+        address: "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+        label: "Aave V3 Pool",
+        protocol: "Aave",
+        balance: "~100M",
+        isContract: true,
+      },
+    ],
+  },
+
+  // ============================================
+  // POLYGON (Chain ID: 137)
+  // ============================================
+  137: {
+    USDC: [
+      {
+        address: "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+        label: "Aave V3 Pool",
+        protocol: "Aave",
+        balance: "~100M",
+        isContract: true,
+      },
+    ],
+    "USDC.e": [
+      {
+        address: "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+        label: "Aave V3 Pool",
+        protocol: "Aave",
+        balance: "~200M",
+        isContract: true,
+      },
+    ],
+    WETH: [
+      {
+        address: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
+        label: "WETH Contract",
+        protocol: "Native",
+        balance: "~50K",
+        isContract: true,
+      },
+    ],
+    WMATIC: [
+      {
+        address: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+        label: "WMATIC Contract (mint directly)",
+        protocol: "Native",
+        balance: "Unlimited",
+        isContract: true,
+      },
+    ],
+  },
+};
+
+// ============================================
 // HELPER FUNCTIONS
 // ============================================
 
@@ -827,4 +1070,80 @@ export function findToken(symbol: string): Array<{ chainId: number; chainName: s
     }
   }
   return results;
+}
+
+// ============================================
+// WHALE HELPER FUNCTIONS
+// ============================================
+
+/**
+ * Get whale addresses for a token on a chain
+ */
+export function getWhales(chainId: number, symbol: string): WhaleInfo[] | null {
+  const chainWhales = TOKEN_WHALES[chainId];
+  if (!chainWhales) return null;
+  return chainWhales[symbol] || null;
+}
+
+/**
+ * Get the best whale for a token (first in the list = highest balance/most reliable)
+ */
+export function getBestWhale(chainId: number, symbol: string): WhaleInfo | null {
+  const whales = getWhales(chainId, symbol);
+  return whales?.[0] || null;
+}
+
+/**
+ * Get all available token whales for a chain
+ */
+export function getChainWhales(chainId: number): Record<string, WhaleInfo[]> | null {
+  return TOKEN_WHALES[chainId] || null;
+}
+
+/**
+ * Generate cast commands to fund a test wallet with tokens
+ * @param chainId - The chain ID
+ * @param tokenSymbol - The token symbol (e.g., "USDC")
+ * @param tokenAddress - The token contract address
+ * @param recipientAddress - The address to receive tokens
+ * @param amount - Amount in token's smallest unit (e.g., 10000000000 for 10,000 USDC)
+ * @param rpcUrl - The RPC URL (default: http://localhost:8545)
+ */
+export function generateFundingCommands(
+  chainId: number,
+  tokenSymbol: string,
+  tokenAddress: string,
+  recipientAddress: string,
+  amount: string,
+  rpcUrl: string = "http://localhost:8545"
+): string | null {
+  const whale = getBestWhale(chainId, tokenSymbol);
+  if (!whale) return null;
+
+  return `# Fund test wallet with ${tokenSymbol}
+# Whale: ${whale.label} (${whale.protocol})
+
+# Variables
+TOKEN=${tokenAddress}
+WHALE=${whale.address}
+RECIPIENT=${recipientAddress}
+AMOUNT=${amount}
+RPC=${rpcUrl}
+
+# Step 1: Verify whale has tokens on your fork
+cast call $TOKEN "balanceOf(address)(uint256)" $WHALE --rpc-url $RPC
+
+# Step 2: Give whale ETH for gas (contracts have 0 ETH)
+cast rpc anvil_setBalance $WHALE 0x8AC7230489E80000 --rpc-url $RPC
+
+# Step 3: Impersonate the whale
+cast rpc anvil_impersonateAccount $WHALE --rpc-url $RPC
+
+# Step 4: Transfer tokens to recipient
+cast send $TOKEN "transfer(address,uint256)" $RECIPIENT $AMOUNT \\
+  --from $WHALE --unlocked --rpc-url $RPC
+
+# Step 5: Stop impersonation (optional)
+cast rpc anvil_stopImpersonatingAccount $WHALE --rpc-url $RPC
+`;
 }

@@ -17,6 +17,7 @@ export interface StackConfig {
   chainId: number;
   rpcUrl: string;
   blockExplorer?: string;
+  blockTime?: number;
 }
 
 export interface StackState {
@@ -54,31 +55,36 @@ export interface StackState {
  * - Fake/missing liquidity and state
  * - Forks give you real mainnet state for free
  */
-const CHAIN_CONFIGS: Record<string, { chainId: number; rpcUrl: string; blockExplorer: string }> = {
+const CHAIN_CONFIGS: Record<string, { chainId: number; rpcUrl: string; blockExplorer: string; blockTime: number }> = {
   mainnet: {
     chainId: 1,
     rpcUrl: "https://mainnet.rpc.buidlguidl.com", // BuidlGuidl free RPC - reliable for Ethereum mainnet
     blockExplorer: "https://etherscan.io",
+    blockTime: 12, // Post-merge: fixed 12s slots
   },
   base: {
     chainId: 8453,
     rpcUrl: "https://mainnet.base.org",
     blockExplorer: "https://basescan.org",
+    blockTime: 2, // L2: 2 second blocks
   },
   optimism: {
     chainId: 10,
     rpcUrl: "https://mainnet.optimism.io",
     blockExplorer: "https://optimistic.etherscan.io",
+    blockTime: 2, // L2: 2 second blocks
   },
   arbitrum: {
     chainId: 42161,
     rpcUrl: "https://arb1.arbitrum.io/rpc",
     blockExplorer: "https://arbiscan.io",
+    blockTime: 1, // Arbitrum is ~0.25s, but 1s is more practical for dev
   },
   polygon: {
     chainId: 137,
     rpcUrl: "https://polygon-rpc.com",
     blockExplorer: "https://polygonscan.com",
+    blockTime: 2, // ~2 second blocks
   },
   // NO TESTNETS - Use fork workflow instead!
   // Forking mainnet gives you real state for free.

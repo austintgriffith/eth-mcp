@@ -378,6 +378,48 @@ Only use testnets if user insists after this explanation.
 
 ---
 
+## CRITICAL: Burner Wallet Testing (AI Browser Automation)
+
+**On local forks, the frontend uses burner wallets - enabling fully automated UI testing.**
+
+### What This Means for AI Agents
+
+When testing via browser automation (e.g., cursor-browser-extension MCP):
+
+1. Navigate to `http://localhost:3000`
+2. The app shows a pre-connected burner wallet address
+3. Click the faucet button (bottom-left) to fund it with local ETH
+4. All interactions work without wallet popups - click buttons, submit transactions
+5. Test the complete user flow end-to-end
+
+### Why This Matters
+
+- **No wallet extension needed**: The burner wallet is built into the app
+- **No confirmation dialogs**: Transactions auto-sign on local fork
+- **Full UI testing**: AI can click through the entire app like a real user
+- **Real behavior verification**: See actual transaction results, state changes, events
+
+### Mainnet Behavior
+
+When connected to real mainnet (not a fork):
+
+- Users must connect a real wallet (MetaMask, Rainbow, etc.)
+- Transactions require user confirmation
+- This is the expected production behavior
+
+### Testing Workflow Example
+
+```
+1. stack_start({ components: ["fork", "deploy", "frontend"] })
+2. Open browser to http://localhost:3000
+3. Click faucet button → burner wallet gets ETH
+4. Test: click deposit, enter amount, submit → transaction executes immediately
+5. Verify: check balances, events, state changes in the UI
+6. Repeat for all user flows
+```
+
+---
+
 ## CRITICAL: External Contracts Configuration
 
 When building projects that interact with **external contracts** (not contracts the user deploys), you MUST configure them for the debug UI.
@@ -468,6 +510,90 @@ Now the debug UI shows USDC and Aave Pool alongside the user's vault.
 
 ---
 
+## CRITICAL: Funding Test Wallets with Tokens on Forks
+
+When building apps that need tokens (USDC vaults, swap interfaces, etc.), the user's connected wallet needs those tokens to test. Use Anvil's impersonation feature to transfer tokens from protocol "whale" addresses.
+
+### Why Protocol Contracts Are Better Than EOAs
+
+Protocol contracts (Morpho, Aave) are more reliable than EOA wallets because:
+- They hold funds as part of their core function
+- Balances are large and stable (often $100M+)
+- Less likely to randomly move funds
+
+### Recommended Whale Addresses
+
+| Chain | Token | Whale Address | Protocol | Balance |
+|-------|-------|---------------|----------|---------|
+| Base | USDC | `0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb` | Morpho Blue | ~131M |
+| Base | USDC | `0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB` | Aave aBasUSDC | ~97M |
+| Ethereum | USDC | `0x37305B1cD40574E4C5Ce33f8e8306Be057fD7341` | Sky PSM | ~4.1B |
+| Ethereum | USDC | `0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c` | Aave USDC V3 | ~700M |
+| Arbitrum | USDC | `0x724dc807b04555b71ed48a6896b6F41593b8C637` | Aave USDCn | ~83M |
+
+### One-Shot Cast Commands
+
+When the user needs tokens to test, provide these commands:
+
+```bash
+# Variables (adjust as needed)
+USDC=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+WHALE=0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb  # Morpho Blue
+RECIPIENT=0xYourWalletAddress
+AMOUNT=10000000000  # 10,000 USDC (6 decimals)
+RPC=http://localhost:8545
+
+# Step 1: Verify whale has USDC on your fork
+cast call $USDC "balanceOf(address)(uint256)" $WHALE --rpc-url $RPC
+
+# Step 2: Give whale ETH for gas (contracts have 0 ETH)
+cast rpc anvil_setBalance $WHALE 0x8AC7230489E80000 --rpc-url $RPC
+
+# Step 3: Impersonate the whale
+cast rpc anvil_impersonateAccount $WHALE --rpc-url $RPC
+
+# Step 4: Transfer tokens to recipient
+cast send $USDC "transfer(address,uint256)" $RECIPIENT $AMOUNT \
+  --from $WHALE --unlocked --rpc-url $RPC
+
+# Step 5: Stop impersonation (optional)
+cast rpc anvil_stopImpersonatingAccount $WHALE --rpc-url $RPC
+```
+
+### Why Each Step Matters
+
+| Step | Why It's Needed |
+|------|-----------------|
+| Verify balance | Block explorer data may not match fork state |
+| Set ETH balance | Contract addresses have 0 ETH by default |
+| Impersonate first | Anvil needs explicit permission to sign as that address |
+| Use --unlocked | Tells cast the account doesn't need a private key |
+
+### When to Proactively Help
+
+Recognize when users need test tokens:
+- "Build me a USDC vault" → User will need USDC to test deposits
+- "Create a swap interface" → User will need tokens to test swaps
+- Any DeFi project involving tokens
+
+After `stack_start`, proactively offer:
+> "Your fork is running! To test with USDC, you'll need to fund your wallet. Here are the cast commands to get 10,000 USDC from the Morpho whale..."
+
+### Getting the User's Connected Address
+
+The user's frontend wallet address comes from RainbowKit/wagmi. In the browser, they can:
+1. Open the app at http://localhost:3000
+2. Connect their wallet
+3. See their address in the UI
+
+Or they can use one of Anvil's pre-funded test accounts:
+```bash
+# Anvil account #0 (pre-funded with 10,000 ETH)
+0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+```
+
+---
+
 ## Tool Usage
 
 ### stack_init
@@ -517,4 +643,5 @@ yarn deploy --network base  # Deploy to real mainnet
 5. **Fork-first workflow**: Test on local fork, deploy to mainnet when ready
 6. **Never ask about testnets**: Forks are strictly better
 7. **Configure external contracts**: Use `stack_configureExternalContracts` when integrating with tokens/protocols
-8. **RPC configuration**: Use BuidlGuidl RPC for Ethereum; prompt for Alchemy key on other chains if 429 errors occur
+8. **Fund test wallets**: Use whale impersonation (Morpho/Aave) to give users tokens for testing
+9. **RPC configuration**: Use BuidlGuidl RPC for Ethereum; prompt for Alchemy key on other chains if 429 errors occur

@@ -315,6 +315,15 @@ export const scaffoldConfig = {
 };
 ```
 
+### Burner Wallet (Local Development)
+
+The `onlyLocalBurnerWallet: true` setting enables frictionless testing:
+
+- **On local fork (chainId 31337)**: Auto-connected burner wallet, no popups
+- **On mainnet**: Real wallet connection required (MetaMask, etc.)
+
+This lets you test the entire app flow locally without any wallet friction, then seamlessly transition to real wallet UX on mainnet. AI agents can use browser automation to click through the app, fund the burner wallet from the faucet, and test all user flows without any wallet extension or confirmation dialogs.
+
 ### foundry.toml
 
 ```toml

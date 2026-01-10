@@ -15,7 +15,7 @@
     "SERVER_INSTRUCTIONS.md"
   ],
   "mcp": {
-    "serverUseInstructions": "CRITICAL DEPLOYMENT WORKFLOW: NEVER ask users about testnets vs mainnet. The workflow is ALWAYS: (1) Fork mainnet locally with `yarn fork --network <chain>`, (2) Test everything on the local fork for FREE, (3) When ready, `yarn generate` to create deployer wallet, (4) Deploy to mainnet with `yarn deploy --network <chain>`. Testnets are NOT recommended - forks give you real mainnet state for free. If user asks for testnet, explain that forks are better (same addresses, real liquidity, free iteration). Only use testnet if user insists after explanation."
+    "serverUseInstructions": "CRITICAL DEPLOYMENT WORKFLOW: NEVER ask users about testnets vs mainnet. The workflow is ALWAYS: (1) stack_init with chain parameter (e.g., 'base', 'mainnet', 'optimism'), (2) stack_install to install dependencies, (3) stack_start(['fork']) which runs `yarn fork --network <chain>` to start LOCAL Anvil fork, (4) stack_start(['deploy']) to deploy to LOCAL fork for FREE, (5) When ready, `yarn generate` to create deployer wallet, (6) Deploy to mainnet with `yarn deploy --network <chain>`. Testnets are NOT recommended - forks give you real mainnet state for free. If user asks for testnet, explain that forks are better (same addresses, real liquidity, free iteration). Only use testnet if user insists after explanation."
   },
   "scripts": {
     "build": "tsc",

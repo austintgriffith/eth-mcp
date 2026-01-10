@@ -5,7 +5,7 @@
 
 import { stateManager } from "./state.js";
 import { processManager } from "./process-manager.js";
-import { CHAIN_REGISTRY } from "./addresses/index.js";
+import { CHAIN_REGISTRY, TOKEN_WHALES, type WhaleInfo } from "./addresses/index.js";
 
 export interface Resource {
   uri: string;
@@ -276,6 +276,118 @@ BANNED: purple, violet, indigo, gradients, glassmorphism, glow, shadows > 4px
 REFERENCE: Etherscan, GitHub Settings, Stripe Dashboard, GOV.UK
 `;
 
+/**
+ * Token Whale Funding Guide - For funding test wallets on forks
+ */
+const WHALE_FUNDING_GUIDE = `# Funding Test Wallets with Tokens on Forks
+
+When users build apps that need tokens (USDC vaults, swap interfaces, DeFi), they need tokens in their test wallet.
+Use Anvil's impersonation feature to transfer from protocol "whale" addresses.
+
+## Key Insight: Protocol Contracts > EOAs
+
+Protocol contracts (Morpho, Aave) are MORE RELIABLE than EOA wallets because:
+- They hold funds as part of their core function
+- Balances are large and stable (often $100M+)
+- Less likely to randomly move funds
+
+## Recommended Whale Addresses by Chain
+
+### Base (Chain ID: 8453)
+| Token | Whale Address | Protocol | Balance |
+|-------|---------------|----------|---------|
+| USDC | 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb | Morpho Blue | ~131M |
+| USDC | 0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB | Aave aBasUSDC | ~97M |
+
+### Ethereum Mainnet (Chain ID: 1)
+| Token | Whale Address | Protocol | Balance |
+|-------|---------------|----------|---------|
+| USDC | 0x37305B1cD40574E4C5Ce33f8e8306Be057fD7341 | Sky PSM | ~4.1B |
+| USDC | 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c | Aave USDC V3 | ~700M |
+| USDC | 0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb | Morpho Blue | ~200M |
+
+### Arbitrum (Chain ID: 42161)
+| Token | Whale Address | Protocol | Balance |
+|-------|---------------|----------|---------|
+| USDC | 0x724dc807b04555b71ed48a6896b6F41593b8C637 | Aave USDCn | ~83M |
+| USDC | 0x2Df1c51E09aECF9cacB7bc98cB1742757f163dF7 | Hyperliquid | ~4B |
+
+### Optimism (Chain ID: 10)
+| Token | Whale Address | Protocol | Balance |
+|-------|---------------|----------|---------|
+| USDC | 0x794a61358D6845594F94dc1DB02A252b5b4814aD | Aave V3 Pool | ~50M |
+
+## One-Shot Cast Commands
+
+\`\`\`bash
+# Variables (adjust as needed)
+TOKEN=0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913  # USDC on Base
+WHALE=0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb  # Morpho Blue
+RECIPIENT=0xYourWalletAddress
+AMOUNT=10000000000  # 10,000 USDC (6 decimals)
+RPC=http://localhost:8545
+
+# Step 1: Verify whale has tokens on your fork
+cast call $TOKEN "balanceOf(address)(uint256)" $WHALE --rpc-url $RPC
+
+# Step 2: Give whale ETH for gas (contracts have 0 ETH)
+cast rpc anvil_setBalance $WHALE 0x8AC7230489E80000 --rpc-url $RPC
+
+# Step 3: Impersonate the whale
+cast rpc anvil_impersonateAccount $WHALE --rpc-url $RPC
+
+# Step 4: Transfer tokens to recipient
+cast send $TOKEN "transfer(address,uint256)" $RECIPIENT $AMOUNT \\
+  --from $WHALE --unlocked --rpc-url $RPC
+
+# Step 5: Stop impersonation (optional)
+cast rpc anvil_stopImpersonatingAccount $WHALE --rpc-url $RPC
+\`\`\`
+
+## Why Each Step Matters
+
+| Step | Why It's Needed |
+|------|-----------------|
+| Verify balance | Block explorer data may not match fork state |
+| Set ETH balance | Contract addresses have 0 ETH by default |
+| Impersonate first | Anvil needs explicit permission to sign as that address |
+| Use --unlocked | Tells cast the account doesn't need a private key |
+
+## Token Decimals Reference
+
+| Token | Decimals | 1,000 tokens = |
+|-------|----------|----------------|
+| USDC | 6 | 1000000000 |
+| USDT | 6 | 1000000000 |
+| DAI | 18 | 1000000000000000000000 |
+| WETH | 18 | 1000000000000000000000 |
+
+## When to Proactively Help
+
+Recognize when users need test tokens:
+- "Build me a USDC vault" → User will need USDC to test deposits
+- "Create a swap interface" → User will need tokens to test swaps
+- Any DeFi project involving tokens
+
+After stack_start, proactively offer the cast commands with:
+1. Correct token address for the chain
+2. Correct whale address (prefer Morpho/Aave)
+3. User's connected address as recipient
+4. Reasonable test amount (e.g., 10,000 USDC)
+
+## Getting User's Address
+
+The user's frontend wallet address comes from RainbowKit/wagmi. They can:
+1. Open http://localhost:3000
+2. Connect their wallet
+3. See their address in the UI
+
+Or use Anvil's pre-funded test account:
+\`\`\`
+0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266  # Anvil account #0
+\`\`\`
+`;
+
 export const resourceDefinitions: Resource[] = [
   {
     uri: "resource://scaffold-eth/rules",
@@ -348,6 +460,12 @@ export const resourceDefinitions: Resource[] = [
     name: "Deployed Contracts",
     description: "List of deployed contracts with addresses",
     mimeType: "application/json",
+  },
+  {
+    uri: "resource://funding/whales",
+    name: "Token Whale Registry",
+    description: "CRITICAL: Whale addresses for funding test wallets with tokens (USDC, WETH, etc.) on Anvil forks. Includes one-shot cast commands.",
+    mimeType: "text/plain",
   },
 ];
 
@@ -523,6 +641,14 @@ Only use testnet if user insists after explanation.`,
     return {
       content: JSON.stringify(state.deployedContracts, null, 2),
       mimeType: "application/json",
+    };
+  }
+
+  // Token whale registry for funding test wallets
+  if (uri === "resource://funding/whales") {
+    return {
+      content: WHALE_FUNDING_GUIDE,
+      mimeType: "text/plain",
     };
   }
 

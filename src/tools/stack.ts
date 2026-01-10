@@ -108,11 +108,11 @@ Requires curl and bash to be available.`,
   },
 
   /**
-   * stack.init - Clone Scaffold-ETH and configure for a chain
+   * stack.init - Create a new Scaffold-ETH project configured for a chain
    */
   init: {
     name: "stack_init",
-    description: `Initialize a new Scaffold-ETH project configured for a specific mainnet chain.
+    description: `Initialize a new Scaffold-ETH 2 project with Foundry, configured for a specific mainnet chain.
 
 IMPORTANT: The chain parameter specifies which MAINNET to fork for local development.
 All development happens on a LOCAL Anvil fork (chainId 31337) - you never deploy directly to mainnet from here.
@@ -122,7 +122,7 @@ NO TESTNETS - use fork workflow instead (fork gives you real mainnet state for f
 
 Development workflow after init:
 1. stack_install() - Install dependencies
-2. stack_start(["fork"]) - Start local fork of the chain
+2. stack_start(["fork"]) - Runs: yarn fork --network <chain>
 3. stack_start(["deploy"]) - Deploy to LOCAL fork (free!)
 4. stack_start(["frontend"]) - Start frontend connected to local fork
 5. When ready: yarn generate && yarn deploy --network <chain> for mainnet
@@ -177,34 +177,45 @@ Requires Foundry CLI tools (forge, anvil) - call stack_install_foundry first if 
       }
 
       try {
-        // Check if directory exists and is empty
+        // Check if directory already exists
+        const parentDir = path.dirname(workspacePath);
+        const projectName = path.basename(workspacePath);
+        
         try {
           const files = await fs.readdir(workspacePath);
           if (files.length > 0) {
             return { success: false, error: "Workspace directory must be empty" };
           }
+          // Directory exists but is empty - remove it so create-eth can create it
+          await fs.rmdir(workspacePath);
         } catch {
-          // Directory doesn't exist, create it
-          await fs.mkdir(workspacePath, { recursive: true });
+          // Directory doesn't exist, that's fine - create-eth will create it
         }
 
-        // Clone scaffold-eth-2 from the foundry branch (NOT main, which uses Hardhat)
-        // Use --recurse-submodules to fetch forge-std and other lib dependencies
-        const cloneCmd = `git clone -b foundry --recurse-submodules https://github.com/scaffold-eth/scaffold-eth-2.git ${workspacePath}`;
-        const safetyCheck = isCommandAllowed(cloneCmd);
+        // Ensure parent directory exists
+        await fs.mkdir(parentDir, { recursive: true });
+
+        // Use the official create-eth CLI to scaffold the project
+        // This produces a clean Foundry-only project (no hardhat remnants)
+        // --skip-install: We control when yarn install runs via stack_install
+        // -s foundry: Select Foundry as the solidity framework
+        const createCmd = `npx -y create-eth@latest ${projectName} -s foundry --skip-install`;
+        const safetyCheck = isCommandAllowed(createCmd);
         if (!safetyCheck.safe) {
           return { success: false, error: safetyCheck.reason };
         }
 
-        await execAsync(cloneCmd, { timeout: 180000 }); // Longer timeout for submodules
-
-        // Remove .git to make it a fresh project
-        await fs.rm(path.join(workspacePath, ".git"), { recursive: true, force: true });
+        await execAsync(createCmd, { 
+          cwd: parentDir, 
+          timeout: 180000,  // 3 minute timeout for npx download + scaffold
+        });
 
         const foundryPath = path.join(workspacePath, "packages", "foundry");
         
-        // The foundry branch already has packages/foundry with proper structure
-        // and all scripts pointing to foundry (not hardhat), so no conversion needed
+        // create-eth with -s foundry produces a clean project with only:
+        // - packages/foundry/ (Solidity contracts)
+        // - packages/nextjs/ (Frontend)
+        // No hardhat folder is created
 
         // Create .env file for foundry by extending the SE-2 defaults
         // IMPORTANT: Include LOCALHOST_KEYSTORE_ACCOUNT which the Makefile requires
@@ -238,30 +249,8 @@ FORK_URL=${chainConfig.rpcUrl}
 `;
         await fs.writeFile(path.join(foundryPath, ".env"), envContent);
 
-        // Verify forge dependencies were cloned via submodules
-        // Check for actual content (src directory) not just empty placeholder
-        const forgeStdSrcPath = path.join(foundryPath, "lib", "forge-std", "src");
-        const forgeStdHasContent = await fs
-          .access(forgeStdSrcPath)
-          .then(() => true)
-          .catch(() => false);
-
-        if (!forgeStdHasContent) {
-          // Submodules didn't clone properly, try forge install as fallback
-          console.log("Forge dependencies not found, running forge install...");
-          try {
-            await execAsync(
-              "forge install foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts --no-commit",
-              { cwd: foundryPath, timeout: 120000 }
-            );
-          } catch (err) {
-            // Don't fail init - user can run forge install manually
-            console.error("Warning: Could not install forge dependencies:", err);
-          }
-        }
-
-        // Initialize new git repo for the whole project
-        await execAsync("git init", { cwd: workspacePath });
+        // Note: create-eth CLI handles git init and forge submodules automatically
+        // No need for manual git init or forge install fallback
 
         // Configure scaffold.config.ts to use foundry (localhost/31337)
         const scaffoldConfigPath = path.join(workspacePath, "packages", "nextjs", "scaffold.config.ts");
@@ -473,7 +462,10 @@ This runs 'yarn install' in the workspace. Must run stack.init first.`,
     description: `Start one or more stack components for LOCAL development.
 
 Components:
-- fork: Start LOCAL Anvil fork of the configured mainnet (chainId 31337)
+- fork: Start LOCAL Anvil fork of the chain configured during stack_init (chainId 31337)
+  RUNS: yarn fork --network <chain>
+  Example: If you initialized with chain "base", this runs: yarn fork --network base
+  Anvil understands chain names and resolves them to RPC URLs automatically.
   This creates a local copy of mainnet state - all testing happens here for FREE.
 - deploy: Deploy contracts to the LOCAL fork (NOT to mainnet!)
   This is safe and costs nothing - iterate as many times as needed.
@@ -529,19 +521,33 @@ You can start multiple components at once. Order matters: fork should start befo
             }
 
             stateManager.setComponentStatus("fork", "starting");
-            // Run anvil fork from the foundry package directory
-            // Pass the RPC URL from state config to yarn fork
-            const foundryPath = path.join(workspacePath, "packages", "foundry");
-            const forkUrl = state.config?.rpcUrl || "http://127.0.0.1:8545";
+            // Run: yarn fork --network <chain>
+            // Anvil understands chain names (base, mainnet, optimism, etc.) and resolves them to RPC URLs
+            const chain = state.config?.chain || "mainnet";
+            const chainConfig = stateManager.getChainConfig(chain);
             const result = await processManager.start(
               "fork",
               "yarn",
-              ["fork", forkUrl],
-              foundryPath
+              ["fork", "--network", chain],
+              workspacePath
             );
             if (result.success) {
               // Wait a moment for anvil to start
               await new Promise((resolve) => setTimeout(resolve, 5000));
+              
+              // Enable auto-mining at chain's natural block time
+              // This ensures time advances naturally for yield accrual, vesting, etc.
+              const blockTime = chainConfig?.blockTime || 12;
+              try {
+                await execAsync(
+                  `cast rpc anvil_setIntervalMining ${blockTime} --rpc-url http://localhost:8545`,
+                  { timeout: 5000 }
+                );
+              } catch (err) {
+                // Log but don't fail - fork still works, just without auto-mining
+                console.error("Failed to enable interval mining:", err);
+              }
+              
               stateManager.setComponentStatus("fork", "running");
             } else {
               stateManager.setComponentStatus("fork", "error");
@@ -722,9 +728,7 @@ Returns initialization state, component status, URLs, and deployed contracts.`,
     name: "stack_generateAccount",
     description: `Create an encrypted deployer account for mainnet deployment.
 
-This runs 'yarn generate' which:
-- For Foundry: Creates a new keystore in ~/.foundry/keystore (password-protected)
-- For Hardhat: Creates DEPLOYER_PRIVATE_KEY_ENCRYPTED in .env (password-protected)
+This runs 'yarn generate' which creates a new keystore in ~/.foundry/keystore (password-protected).
 
 The user will be prompted to set an encryption password.
 REMEMBER: This password is needed for all future deployments.

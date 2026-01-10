@@ -10,6 +10,11 @@ import {
   getProtocolAddresses,
   getChainTokens,
   findToken,
+  getWhales,
+  getBestWhale,
+  getChainWhales,
+  generateFundingCommands,
+  type WhaleInfo,
 } from "../addresses/index.js";
 
 export const addressTools = {
@@ -253,6 +258,168 @@ Returns all chains where the token is available with addresses.`,
           address: r.token.address,
           decimals: r.token.decimals,
         })),
+      };
+    },
+  },
+
+  /**
+   * addresses.getWhale - Get whale addresses for funding test wallets
+   */
+  getWhale: {
+    name: "addresses_getWhale",
+    description: `Get whale addresses for funding test wallets with tokens on Anvil forks.
+
+WHEN TO USE: When users need tokens (USDC, WETH, DAI) to test their DeFi apps.
+
+Returns protocol contract addresses (Morpho, Aave) that hold large token balances.
+Protocol contracts are more reliable than EOAs because they hold funds as their core function.
+
+Also returns one-shot cast commands to transfer tokens from the whale to a recipient.
+
+Example usage flow:
+1. User builds a USDC vault on Base
+2. Call addresses_getWhale({ chain: "base", token: "USDC" })
+3. Get Morpho Blue whale (0xBBBB...) with ~131M USDC
+4. Provide user with cast commands to fund their wallet`,
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        chain: {
+          type: "string",
+          description: "Chain name (mainnet, base, optimism, arbitrum, polygon)",
+        },
+        token: {
+          type: "string",
+          description: "Token symbol (USDC, WETH, DAI, etc.)",
+        },
+        recipient: {
+          type: "string",
+          description: "Optional: Recipient address to include in funding commands",
+        },
+        amount: {
+          type: "string",
+          description: "Optional: Amount in token's smallest unit (e.g., 10000000000 for 10k USDC)",
+        },
+      },
+      required: ["chain", "token"],
+    },
+    handler: async (args: { chain: string; token: string; recipient?: string; amount?: string }) => {
+      const chainData = CHAIN_BY_NAME[args.chain.toLowerCase()];
+      if (!chainData) {
+        return {
+          success: false,
+          error: `Unknown chain: ${args.chain}. Supported: mainnet, base, optimism, arbitrum, polygon`,
+        };
+      }
+
+      const whales = getWhales(chainData.chainId, args.token);
+      if (!whales || whales.length === 0) {
+        // Return helpful message about what tokens have whales
+        const chainWhales = getChainWhales(chainData.chainId);
+        const availableTokens = chainWhales ? Object.keys(chainWhales).join(", ") : "none";
+        return {
+          success: false,
+          error: `No whale found for ${args.token} on ${args.chain}. Available tokens with whales: ${availableTokens}`,
+          hint: "For tokens without whales, try using Blockscout MCP to find large holders, or for WETH, mint directly by depositing ETH.",
+        };
+      }
+
+      const bestWhale = whales[0];
+      
+      // Get token info for decimals
+      const tokenInfo = chainData.tokens[args.token];
+      
+      // Generate funding commands if recipient provided
+      let fundingCommands: string | null = null;
+      if (args.recipient && tokenInfo) {
+        const amount = args.amount || (tokenInfo.decimals === 6 ? "10000000000" : "10000000000000000000000"); // 10k default
+        fundingCommands = generateFundingCommands(
+          chainData.chainId,
+          args.token,
+          tokenInfo.address,
+          args.recipient,
+          amount
+        );
+      }
+
+      return {
+        success: true,
+        chain: args.chain,
+        chainId: chainData.chainId,
+        token: args.token,
+        tokenAddress: tokenInfo?.address || "unknown",
+        tokenDecimals: tokenInfo?.decimals || "unknown",
+        recommendedWhale: {
+          address: bestWhale.address,
+          label: bestWhale.label,
+          protocol: bestWhale.protocol,
+          balance: bestWhale.balance,
+          isContract: bestWhale.isContract,
+        },
+        allWhales: whales,
+        fundingCommands,
+        importantNotes: [
+          "Protocol contracts (Morpho, Aave) are more reliable than EOAs",
+          "Contract whales need ETH for gas - use anvil_setBalance first",
+          "Must call anvil_impersonateAccount before sending",
+          "Use --unlocked flag with cast send",
+        ],
+      };
+    },
+  },
+
+  /**
+   * addresses.listWhales - List all available token whales on a chain
+   */
+  listWhales: {
+    name: "addresses_listWhales",
+    description: `List all available token whales on a specific chain.
+Shows which tokens have known whale addresses for funding test wallets.`,
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        chain: {
+          type: "string",
+          description: "Chain name (mainnet, base, optimism, arbitrum, polygon)",
+        },
+      },
+      required: ["chain"],
+    },
+    handler: async (args: { chain: string }) => {
+      const chainData = CHAIN_BY_NAME[args.chain.toLowerCase()];
+      if (!chainData) {
+        return {
+          success: false,
+          error: `Unknown chain: ${args.chain}. Supported: mainnet, base, optimism, arbitrum, polygon`,
+        };
+      }
+
+      const chainWhales = getChainWhales(chainData.chainId);
+      if (!chainWhales) {
+        return {
+          success: false,
+          error: `No whales configured for ${args.chain}`,
+        };
+      }
+
+      const tokens = Object.entries(chainWhales).map(([symbol, whales]) => ({
+        token: symbol,
+        whaleCount: whales.length,
+        bestWhale: whales[0] ? {
+          address: whales[0].address,
+          label: whales[0].label,
+          protocol: whales[0].protocol,
+          balance: whales[0].balance,
+        } : null,
+      }));
+
+      return {
+        success: true,
+        chain: args.chain,
+        chainId: chainData.chainId,
+        tokenCount: tokens.length,
+        tokens,
+        usage: "Use addresses_getWhale({ chain, token }) to get whale details and funding commands",
       };
     },
   },
