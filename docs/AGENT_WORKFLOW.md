@@ -163,13 +163,13 @@ Then modify:
 }
 ```
 
-#### Step 7: Create Swap UI
+#### Step 7: Create Swap UI (on Home Page)
 
 ```json
 {
   "tool": "project_writeFile",
   "arguments": {
-    "path": "packages/nextjs/app/swap/page.tsx",
+    "path": "packages/nextjs/app/page.tsx",
     "content": "\"use client\";\n\nimport { useState } from \"react\";\nimport { useScaffoldContractRead, useScaffoldContractWrite } from \"~~/hooks/scaffold-eth\";\n\nexport default function SwapPage() {\n  const [amount, setAmount] = useState(\"\");\n  \n  return (\n    <div className=\"flex flex-col items-center pt-10\">\n      <h1 className=\"text-4xl font-bold\">Tax Token Swap</h1>\n      <p className=\"text-lg mt-2\">1% tax on all transfers</p>\n      \n      <div className=\"mt-8 bg-base-200 p-6 rounded-xl w-96\">\n        <input\n          type=\"number\"\n          placeholder=\"Amount to swap\"\n          value={amount}\n          onChange={(e) => setAmount(e.target.value)}\n          className=\"input input-bordered w-full\"\n        />\n        \n        <div className=\"mt-4 text-sm\">\n          Tax (1%): {amount ? (parseFloat(amount) * 0.01).toFixed(4) : \"0\"}\n        </div>\n        \n        <button className=\"btn btn-primary w-full mt-4\">\n          Swap\n        </button>\n      </div>\n    </div>\n  );\n}"
   }
 }

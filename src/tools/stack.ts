@@ -31,320 +31,6 @@ async function checkFoundryInstalled(): Promise<{
   }
 }
 
-/**
- * Create the Foundry package structure from scratch
- * Called when the cloned scaffold-eth-2 doesn't have a foundry package
- */
-async function createFoundryPackage(
-  workspacePath: string,
-  chainConfig: { rpcUrl: string; chainId: number }
-): Promise<void> {
-  const foundryPath = path.join(workspacePath, "packages", "foundry");
-
-  // Create directory structure
-  await fs.mkdir(path.join(foundryPath, "contracts"), { recursive: true });
-  await fs.mkdir(path.join(foundryPath, "script"), { recursive: true });
-  await fs.mkdir(path.join(foundryPath, "test"), { recursive: true });
-  await fs.mkdir(path.join(foundryPath, "deployments"), { recursive: true });
-
-  // Create foundry.toml
-  const foundryToml = `[profile.default]
-src = "contracts"
-out = "out"
-libs = ["lib"]
-fs_permissions = [{ access = "read-write", path = "./"}]
-
-[rpc_endpoints]
-default_network = "http://127.0.0.1:8545"
-localhost = "http://127.0.0.1:8545"
-
-[fmt]
-line_length = 120
-tab_width = 2
-bracket_spacing = true
-`;
-  await fs.writeFile(path.join(foundryPath, "foundry.toml"), foundryToml);
-
-  // Create remappings.txt
-  const remappings = `forge-std/=lib/forge-std/src/
-@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/
-`;
-  await fs.writeFile(path.join(foundryPath, "remappings.txt"), remappings);
-
-  // Create package.json
-  const packageJson = {
-    name: "@se-2/foundry",
-    version: "0.0.1",
-    scripts: {
-      account: "node script/ListAccount.js",
-      generate: "node script/GenerateAccount.js",
-      chain: "anvil --config-out localhost.json",
-      compile: "forge compile",
-      deploy: "forge script script/Deploy.s.sol --rpc-url http://localhost:8545 --broadcast",
-      "deploy:verify": "forge script script/Deploy.s.sol --rpc-url ${1:-default_network} --broadcast --verify",
-      flatten: "forge flatten",
-      fork: `anvil --fork-url \${FORK_URL:-${chainConfig.rpcUrl}} --chain-id 31337`,
-      format: "forge fmt",
-      lint: "forge fmt --check",
-      test: "forge test",
-      verify: "forge verify-contract",
-    },
-    dependencies: {
-      "@inquirer/password": "~2.2.0",
-      dotenv: "~16.3.1",
-      envfile: "~6.18.0",
-      ethers: "~5.7.2",
-      qrcode: "~1.5.3",
-      toml: "~3.0.0",
-    },
-  };
-  await fs.writeFile(
-    path.join(foundryPath, "package.json"),
-    JSON.stringify(packageJson, null, 2)
-  );
-
-  // Create DeployHelpers.s.sol
-  // NOTE: This uses Anvil's default account for LOCAL development only.
-  // For mainnet deployment, users should run: yarn generate && yarn deploy --network <chain>
-  const deployHelpers = `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
-
-import "forge-std/Script.sol";
-import "forge-std/Vm.sol";
-
-/**
- * @title ScaffoldETHDeploy
- * @notice Deployment helper for Scaffold-ETH 2 projects
- * 
- * LOCAL DEVELOPMENT (chainId 31337):
- *   Uses Anvil's default funded account - no configuration needed.
- * 
- * MAINNET DEPLOYMENT:
- *   DO NOT use this directly. Instead run:
- *   1. yarn generate - creates encrypted deployer keystore
- *   2. yarn account - shows deployer address (fund this)
- *   3. yarn deploy --network base - deploys with keystore
- */
-contract ScaffoldETHDeploy is Script {
-    error InvalidChain(string);
-
-    struct Deployment {
-        string name;
-        address addr;
-    }
-
-    // Anvil's default account #0 - ONLY for local development
-    uint256 constant ANVIL_DEFAULT_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
-
-    string root;
-    string path;
-    Deployment[] public deployments;
-
-    modifier ScaffoldEthDeployerRunner() {
-        uint256 deployerPrivateKey = getDeployerKey();
-        vm.startBroadcast(deployerPrivateKey);
-        _;
-        vm.stopBroadcast();
-        exportDeployments();
-    }
-
-    function getDeployerKey() internal view returns (uint256) {
-        // For local development (Anvil), use the default funded account
-        if (block.chainid == 31337) {
-            return ANVIL_DEFAULT_KEY;
-        }
-        
-        // For live networks, this script should NOT be used directly.
-        // Users should run: yarn deploy --network <chain>
-        // which handles keystore-based deployment securely.
-        revert InvalidChain(
-            "For mainnet deployment, use: yarn generate && yarn deploy --network <chain>"
-        );
-    }
-
-    function exportDeployments() internal {
-        string memory chainId = vm.toString(block.chainid);
-        root = vm.projectRoot();
-        path = string.concat(root, "/deployments/", chainId, ".json");
-
-        string memory jsonKey = "deployments";
-
-        uint256 len = deployments.length;
-        for (uint256 i = 0; i < len; i++) {
-            vm.serializeString(jsonKey, deployments[i].name, vm.toString(deployments[i].addr));
-        }
-
-        string memory finalJson = vm.serializeString(jsonKey, "chainId", chainId);
-        vm.writeJson(finalJson, path);
-    }
-
-    function deployer() internal view returns (address) {
-        if (block.chainid == 31337) {
-            return vm.addr(ANVIL_DEFAULT_KEY);
-        }
-        // For live networks, deployer address comes from keystore
-        return msg.sender;
-    }
-}
-`;
-  await fs.writeFile(
-    path.join(foundryPath, "script", "DeployHelpers.s.sol"),
-    deployHelpers
-  );
-
-  // Create empty Deploy.s.sol
-  const deploySol = `// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
-
-import "./DeployHelpers.s.sol";
-
-contract DeployScript is ScaffoldETHDeploy {
-    function run() external ScaffoldEthDeployerRunner {
-        // Deploy your contracts here
-        // Example:
-        // MyContract myContract = new MyContract();
-        // console.log("MyContract deployed to:", address(myContract));
-        // deployments.push(Deployment({ name: "MyContract", addr: address(myContract) }));
-    }
-}
-`;
-  await fs.writeFile(path.join(foundryPath, "script", "Deploy.s.sol"), deploySol);
-
-  // Create .gitignore
-  const gitignore = `cache/
-out/
-.env
-broadcast/
-`;
-  await fs.writeFile(path.join(foundryPath, ".gitignore"), gitignore);
-
-  // Create GenerateAccount.js - generates a new encrypted deployer wallet
-  const generateAccountJs = `const { ethers } = require("ethers");
-const { parse, stringify } = require("envfile");
-const fs = require("fs");
-const password = require("@inquirer/password").default;
-
-const envFilePath = "./.env";
-
-const getValidatedPassword = async () => {
-  while (true) {
-    const pass = await password({ message: "Enter a password to encrypt your private key:" });
-    const confirmation = await password({ message: "Confirm password:" });
-
-    if (pass === confirmation) {
-      return pass;
-    }
-    console.log("❌ Passwords don't match. Please try again.");
-  }
-};
-
-const setNewEnvConfig = async (existingEnvConfig = {}) => {
-  console.log("👛 Generating new Wallet\\n");
-  const randomWallet = ethers.Wallet.createRandom();
-
-  const pass = await getValidatedPassword();
-  const encryptedJson = await randomWallet.encrypt(pass);
-
-  const newEnvConfig = {
-    ...existingEnvConfig,
-    DEPLOYER_PRIVATE_KEY_ENCRYPTED: encryptedJson,
-  };
-
-  // Store in .env
-  fs.writeFileSync(envFilePath, stringify(newEnvConfig));
-  console.log("\\n📄 Encrypted Private Key saved to packages/foundry/.env file");
-  console.log("🪄 Generated wallet address:", randomWallet.address, "\\n");
-  console.log("⚠️ Make sure to remember your password! You'll need it to decrypt the private key.");
-};
-
-async function main() {
-  if (!fs.existsSync(envFilePath)) {
-    // No .env file yet.
-    await setNewEnvConfig();
-    return;
-  }
-
-  const existingEnvConfig = parse(fs.readFileSync(envFilePath).toString());
-  if (existingEnvConfig.DEPLOYER_PRIVATE_KEY_ENCRYPTED) {
-    console.log("⚠️ You already have a deployer account. Check the packages/foundry/.env file");
-    return;
-  }
-
-  await setNewEnvConfig(existingEnvConfig);
-}
-
-main().catch(error => {
-  console.error(error);
-  process.exitCode = 1;
-});
-`;
-  await fs.writeFile(
-    path.join(foundryPath, "script", "GenerateAccount.js"),
-    generateAccountJs
-  );
-
-  // Create ListAccount.js - displays deployer address and balances
-  const listAccountJs = `require("dotenv").config();
-const { ethers } = require("ethers");
-const QRCode = require("qrcode");
-const password = require("@inquirer/password").default;
-
-// Network configurations for balance checking
-const networks = {
-  mainnet: { url: "https://eth.llamarpc.com", name: "Ethereum Mainnet" },
-  base: { url: "https://mainnet.base.org", name: "Base" },
-  optimism: { url: "https://mainnet.optimism.io", name: "Optimism" },
-  arbitrum: { url: "https://arb1.arbitrum.io/rpc", name: "Arbitrum One" },
-  polygon: { url: "https://polygon-rpc.com", name: "Polygon" },
-};
-
-async function main() {
-  const encryptedKey = process.env.DEPLOYER_PRIVATE_KEY_ENCRYPTED;
-
-  if (!encryptedKey) {
-    console.log("🚫️ You don't have a deployer account. Run \`yarn generate\` first");
-    return;
-  }
-
-  const pass = await password({ message: "Enter your password to decrypt the private key:" });
-  let wallet;
-  try {
-    wallet = await ethers.Wallet.fromEncryptedJson(encryptedKey, pass);
-  } catch (e) {
-    console.log("❌ Failed to decrypt private key. Wrong password?");
-    return;
-  }
-
-  const address = wallet.address;
-  console.log(await QRCode.toString(address, { type: "terminal", small: true }));
-  console.log("Public address:", address, "\\n");
-
-  // Check balance on each network
-  for (const [networkId, network] of Object.entries(networks)) {
-    try {
-      const provider = new ethers.providers.JsonRpcProvider(network.url);
-      const balance = await provider.getBalance(address);
-      console.log("--", network.name, "-- 📡");
-      console.log("   balance:", ethers.utils.formatEther(balance), "ETH");
-      const nonce = await provider.getTransactionCount(address);
-      console.log("   nonce:", nonce);
-    } catch (e) {
-      console.log("Can't connect to network", network.name);
-    }
-  }
-}
-
-main().catch(error => {
-  console.error(error);
-  process.exitCode = 1;
-});
-`;
-  await fs.writeFile(
-    path.join(foundryPath, "script", "ListAccount.js"),
-    listAccountJs
-  );
-}
-
 export const stackTools = {
   /**
    * stack.install_foundry - Install the Foundry toolchain
@@ -503,13 +189,14 @@ Requires Foundry CLI tools (forge, anvil) - call stack_install_foundry first if 
         }
 
         // Clone scaffold-eth-2 from the foundry branch (NOT main, which uses Hardhat)
-        const cloneCmd = `git clone -b foundry https://github.com/scaffold-eth/scaffold-eth-2.git ${workspacePath}`;
+        // Use --recurse-submodules to fetch forge-std and other lib dependencies
+        const cloneCmd = `git clone -b foundry --recurse-submodules https://github.com/scaffold-eth/scaffold-eth-2.git ${workspacePath}`;
         const safetyCheck = isCommandAllowed(cloneCmd);
         if (!safetyCheck.safe) {
           return { success: false, error: safetyCheck.reason };
         }
 
-        await execAsync(cloneCmd, { timeout: 120000 });
+        await execAsync(cloneCmd, { timeout: 180000 }); // Longer timeout for submodules
 
         // Remove .git to make it a fresh project
         await fs.rm(path.join(workspacePath, ".git"), { recursive: true, force: true });
@@ -519,19 +206,26 @@ Requires Foundry CLI tools (forge, anvil) - call stack_install_foundry first if 
         // The foundry branch already has packages/foundry with proper structure
         // and all scripts pointing to foundry (not hardhat), so no conversion needed
 
-        // Create/update .env file for foundry - NO PRIVATE KEYS
-        // Local development uses Anvil's built-in funded accounts
-        // Mainnet deployment uses yarn generate (encrypted keystore)
+        // Create .env file for foundry by extending the SE-2 defaults
+        // IMPORTANT: Include LOCALHOST_KEYSTORE_ACCOUNT which the Makefile requires
         const envContent = `# Foundry environment - DO NOT COMMIT THIS FILE
-# Chain configuration for forking
+# Extended from scaffold-eth-2 .env.example
+
+# Alchemy API key for deploying to networks (see foundry.toml rpc_endpoints)
+ALCHEMY_API_KEY=oKxs-03sij-U_N0iOlrSsZFr29-IqbuF
+
+# Etherscan API key for contract verification
+ETHERSCAN_API_KEY=DNXJA8RX2Q3VZ4URQIWP7Z68CJXQZSC6AW
+
+# Keystore account for local Anvil deployments (scaffold-eth-default = Anvil account #9)
+LOCALHOST_KEYSTORE_ACCOUNT=scaffold-eth-default
+
+# Chain configuration for forking (used by: yarn fork)
 FORK_URL=${chainConfig.rpcUrl}
-CHAIN_ID=${chainConfig.chainId}
 
 # ============================================================
-# DEPLOYER ACCOUNT SECURITY
+# DEPLOYER ACCOUNT - DO NOT ADD PRIVATE KEYS HERE
 # ============================================================
-# DO NOT add DEPLOYER_PRIVATE_KEY here!
-#
 # For LOCAL development:
 #   Uses Anvil's built-in funded accounts automatically.
 #
@@ -539,28 +233,29 @@ CHAIN_ID=${chainConfig.chainId}
 #   1. Run: yarn generate (creates encrypted keystore)
 #   2. Run: yarn account (shows address to fund)
 #   3. Fund the deployer address with ETH
-#   4. Run: yarn deploy --network base
+#   4. Run: yarn deploy --network ${chain}
 # ============================================================
 `;
         await fs.writeFile(path.join(foundryPath, ".env"), envContent);
 
-        // Install forge dependencies (forge-std, OpenZeppelin) if not present
-        const forgeStdPath = path.join(foundryPath, "lib", "forge-std");
-        const forgeStdExists = await fs
-          .access(forgeStdPath)
+        // Verify forge dependencies were cloned via submodules
+        // Check for actual content (src directory) not just empty placeholder
+        const forgeStdSrcPath = path.join(foundryPath, "lib", "forge-std", "src");
+        const forgeStdHasContent = await fs
+          .access(forgeStdSrcPath)
           .then(() => true)
           .catch(() => false);
 
-        if (!forgeStdExists) {
+        if (!forgeStdHasContent) {
+          // Submodules didn't clone properly, try forge install as fallback
+          console.log("Forge dependencies not found, running forge install...");
           try {
-            // Initialize git in foundry folder for forge install to work
-            await execAsync("git init", { cwd: foundryPath });
             await execAsync(
               "forge install foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts --no-commit",
               { cwd: foundryPath, timeout: 120000 }
             );
           } catch (err) {
-            // Don't fail init - user can install manually
+            // Don't fail init - user can run forge install manually
             console.error("Warning: Could not install forge dependencies:", err);
           }
         }
@@ -835,11 +530,13 @@ You can start multiple components at once. Order matters: fork should start befo
 
             stateManager.setComponentStatus("fork", "starting");
             // Run anvil fork from the foundry package directory
+            // Pass the RPC URL from state config to yarn fork
             const foundryPath = path.join(workspacePath, "packages", "foundry");
+            const forkUrl = state.config?.rpcUrl || "http://127.0.0.1:8545";
             const result = await processManager.start(
               "fork",
               "yarn",
-              ["fork"],
+              ["fork", forkUrl],
               foundryPath
             );
             if (result.success) {

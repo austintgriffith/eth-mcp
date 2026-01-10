@@ -198,22 +198,24 @@ function MyComponent() {
 
 ---
 
-## Creating New Pages
+## Creating the Main UI (Home Page)
+
+**For your app's primary feature, replace the home page content:**
 
 ```tsx
-// packages/nextjs/app/mypage/page.tsx
+// packages/nextjs/app/page.tsx
 "use client";
 
 import type { NextPage } from "next";
 import { useAccount } from "wagmi";
 import { Address } from "~~/components/scaffold-eth";
 
-const MyPage: NextPage = () => {
+const Home: NextPage = () => {
   const { address } = useAccount();
   
   return (
     <div className="flex flex-col items-center pt-10">
-      <h1 className="text-4xl font-bold">My Page</h1>
+      <h1 className="text-4xl font-bold">My App</h1>
       
       {address ? (
         <div className="mt-4">
@@ -226,7 +228,33 @@ const MyPage: NextPage = () => {
   );
 };
 
-export default MyPage;
+export default Home;
+```
+
+The user expects to see your app at `http://localhost:3000`, not a default landing page.
+
+---
+
+## Creating Secondary Pages (Sub-routes)
+
+**Only create sub-routes for secondary features** like settings, history, or admin:
+
+```tsx
+// packages/nextjs/app/settings/page.tsx
+"use client";
+
+import type { NextPage } from "next";
+
+const SettingsPage: NextPage = () => {
+  return (
+    <div className="flex flex-col items-center pt-10">
+      <h1 className="text-4xl font-bold">Settings</h1>
+      {/* Secondary feature content */}
+    </div>
+  );
+};
+
+export default SettingsPage;
 ```
 
 ---

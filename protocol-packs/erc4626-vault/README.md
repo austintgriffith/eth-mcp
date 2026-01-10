@@ -104,13 +104,13 @@ contract DeployScript is ScaffoldETHDeploy {
 }
 ```
 
-### 4. Add UI
+### 4. Add UI (on Home Page)
 
 ```tsx
-// packages/nextjs/app/vault/page.tsx
+// packages/nextjs/app/page.tsx
 import VaultUI from "~~/components/VaultUI";
 
-export default function VaultPage() {
+export default function Home() {
   return (
     <VaultUI
       vaultName="MyYieldVault"

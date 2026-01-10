@@ -1014,6 +1014,8 @@ The goal is not to lecture, but to surface the right lesson at the right moment.
             type: "text",
             text: `# Frontend Design Guide
 
+**RULE: NEVER use purple/pink/indigo gradients. Use existing Scaffold-ETH theme tokens (base-100, base-200, base-300, primary, secondary, accent) for all colors.**
+
 ## CRITICAL RULE: No Purple Gradients
 
 When building any frontend, NEVER default to:

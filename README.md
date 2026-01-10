@@ -217,10 +217,10 @@ Agent: "Build a swapping app with a 1% tax token on Base"
 6. stack_status()
    → Returns: { urls: { rpc: "http://localhost:8545", frontend: "http://localhost:3000" } }
 
-7. project_writeFile({ path: "packages/nextjs/app/swap/page.tsx", content: "..." })
-   → Creates swap UI page
+7. project_writeFile({ path: "packages/nextjs/app/page.tsx", content: "..." })
+   → Creates swap UI on home page
 
-Result: Running app at http://localhost:3000/swap
+Result: Running app at http://localhost:3000
 ```
 
 ---

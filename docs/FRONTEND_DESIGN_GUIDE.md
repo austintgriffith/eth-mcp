@@ -1,5 +1,7 @@
 # Frontend Design Guide
 
+**RULE: NEVER use purple/pink/indigo gradients. Use existing Scaffold-ETH theme tokens (base-100, base-200, base-300, primary, secondary, accent) for all colors.**
+
 This guide ensures AI agents create professional, context-appropriate frontends instead of generic "vibe coded" purple gradient SaaS apps.
 
 ---

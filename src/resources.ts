@@ -148,6 +148,8 @@ The private key is ALWAYS encrypted with a password. Never stored in plain text.
  */
 const FRONTEND_DESIGN_SYSTEM = `# Frontend Design System
 
+**RULE: NEVER use purple/pink/indigo gradients. Use existing Scaffold-ETH theme tokens (base-100, base-200, base-300, primary, secondary, accent) for all colors.**
+
 CRITICAL: Create professional, context-appropriate frontends. NEVER default to purple gradients.
 
 ## Design Anti-Patterns (BANNED)

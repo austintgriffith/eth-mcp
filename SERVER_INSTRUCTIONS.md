@@ -62,6 +62,8 @@ import { Address, AddressInput, Balance, EtherInput } from "~~/components/scaffo
 
 ## CRITICAL: Frontend Design
 
+**RULE: NEVER use purple/pink/indigo gradients. Use existing Scaffold-ETH theme tokens (base-100, base-200, base-300, primary, secondary, accent) for all colors.**
+
 **NEVER use purple gradients or generic "SaaS" styling.**
 
 Purple gradients reduce perceived seriousness and make apps feel like "yet another AI-generated app." The goal is trust, durability, and technical credibility.
@@ -110,6 +112,30 @@ DO NOT translate to: purple gradients, glow effects, glassmorphism.
 - GOV.UK - accessible
 
 See `resource://frontend/design-system` for full guidelines.
+
+---
+
+## CRITICAL: Main UI Goes on the Home Page
+
+**ALWAYS put the main application UI on `packages/nextjs/app/page.tsx`.**
+
+When building a scaffold-eth app, the primary feature should be on the home page:
+
+- A vault app → vault UI on `/` (page.tsx)
+- A swap app → swap UI on `/` (page.tsx)
+- An NFT mint app → mint UI on `/` (page.tsx)
+
+**WRONG:**
+
+- Creating `packages/nextjs/app/swap/page.tsx` and leaving home page untouched
+- Building the main feature on a sub-route like `/vault` or `/dashboard`
+
+**RIGHT:**
+
+- Replace the default content in `packages/nextjs/app/page.tsx` with your app's main UI
+- Only create sub-routes for secondary features (settings, history, admin, etc.)
+
+The user expects to see the app when they visit `http://localhost:3000`, not a default scaffold-eth landing page.
 
 ---
 
