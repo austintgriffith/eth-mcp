@@ -18,7 +18,8 @@ import { processTools } from "./tools/process.js";
 import { projectTools } from "./tools/project.js";
 import { addressTools } from "./tools/addresses.js";
 import { defiTools } from "./tools/defi.js";
-import { listResources, readResource } from "./resources.js";
+import { educationTools } from "./tools/education.js";
+import { listResources, readResource, prefetchResources } from "./resources.js";
 import { prompts, getPromptMessages } from "./prompts.js";
 
 // Tool type for registry
@@ -45,6 +46,9 @@ const allTools: Record<string, Tool> = {
   ),
   ...Object.fromEntries(
     Object.entries(defiTools).map(([_, tool]) => [tool.name, tool as Tool])
+  ),
+  ...Object.fromEntries(
+    Object.entries(educationTools).map(([_, tool]) => [tool.name, tool as Tool])
   ),
 };
 
@@ -187,6 +191,11 @@ export function createServer(): Server {
 export async function runServer(): Promise<void> {
   const server = createServer();
   const transport = new StdioServerTransport();
+
+  // Prefetch SE2 documentation on startup
+  prefetchResources().catch(() => {
+    // Silent fail - docs will be fetched on first request
+  });
 
   await server.connect(transport);
 

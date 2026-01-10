@@ -94,20 +94,58 @@ Deploys to your LOCAL fork:
 yarn generate
 ```
 
-Creates a new deployer wallet:
-- Shows you the address
-- Fund it with 0.01-0.1 ETH (usually enough)
+Creates a new **ENCRYPTED** deployer account:
+- You'll be prompted to set a password
+- **REMEMBER THIS PASSWORD** - you need it for every deployment
+- For Foundry: Creates keystore in `~/.foundry/keystore`
+- For Hardhat: Creates `DEPLOYER_PRIVATE_KEY_ENCRYPTED` in `.env`
 
-### Step 6: Deploy to Mainnet
+**Your private key is NEVER stored in plain text.**
+
+### Step 6: Check Deployer Address
+
+```bash
+yarn account
+```
+
+Shows your deployer address and balances:
+- Copy the address
+- Fund it with 0.01-0.1 ETH on the target chain
+
+### Step 7: Deploy to Mainnet
 
 ```bash
 yarn deploy --network base
 ```
 
 Deploys to REAL mainnet:
+- Prompts for your encryption password
 - Uses your funded deployer wallet
 - Costs real gas
 - But you're confident it works!
+
+---
+
+## SECURITY: Why Encrypted Deployers?
+
+**NEVER put raw private keys in .env files!**
+
+```bash
+# WRONG - DANGEROUS
+DEPLOYER_PRIVATE_KEY=0xac0974bec...
+
+# RIGHT - Scaffold-ETH way
+yarn generate  # Creates encrypted keystore
+yarn account   # Shows address to fund
+yarn deploy --network base  # Uses keystore
+```
+
+Raw private keys get:
+- Committed to git accidentally
+- Leaked in CI/CD logs  
+- Stolen by malware scanning .env files
+
+Encrypted keystores require your password to use.
 
 ---
 
@@ -118,7 +156,8 @@ Deploys to REAL mainnet:
 | `yarn fork --network base` | Start local Base fork |
 | `yarn deploy` | Deploy to local fork |
 | `yarn start` | Start frontend (connects to local) |
-| `yarn generate` | Create deployer wallet |
+| `yarn generate` | Create encrypted deployer account |
+| `yarn account` | Show deployer address and balances |
 | `yarn deploy --network base` | Deploy to real Base mainnet |
 | `yarn deploy --network mainnet` | Deploy to real Ethereum mainnet |
 | `yarn deploy --network optimism` | Deploy to real Optimism mainnet |
@@ -132,6 +171,8 @@ Deploys to REAL mainnet:
 - "Should I deploy to testnet or mainnet?"
 - "Do you want to use Base Sepolia first?"
 - "Which network should I deploy to?"
+- "Set DEPLOYER_PRIVATE_KEY in .env"
+- "Add your private key to the .env file"
 
 ### ALWAYS Do This
 
@@ -141,7 +182,18 @@ When user says "build me an app on Base":
 2. Install: `stack_install()`
 3. Write contracts
 4. Start local fork and deploy: `stack_start({ components: ["fork", "deploy", "frontend"] })`
-5. Tell user: "Everything is running locally. When you're ready for mainnet, we'll use `yarn generate` and `yarn deploy --network base`."
+5. Tell user: "Everything is running locally. When ready for mainnet, run `yarn generate` to create an encrypted deployer, `yarn account` to see the address, fund it, then `yarn deploy --network base`."
+
+### For Mainnet Deployment Instructions
+
+ALWAYS say:
+> "To deploy to mainnet:
+> 1. Run `yarn generate` to create an encrypted deployer account
+> 2. Run `yarn account` to see your deployer address  
+> 3. Fund that address with 0.01-0.1 ETH
+> 4. Run `yarn deploy --network base`"
+
+NEVER suggest putting private keys in .env files.
 
 ### If User Asks for Testnet
 
@@ -179,23 +231,26 @@ Yes, but it's not recommended. Forks are strictly better for development. Only e
 ## Summary
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    DEVELOPMENT (FREE)                        │
-│  ┌─────────┐    ┌──────────┐    ┌─────────────────────────┐ │
-│  │  Fork   │ -> │  Deploy  │ -> │  Test with real state   │ │
-│  │ mainnet │    │ to fork  │    │  (Uniswap, Aave, etc.)  │ │
-│  └─────────┘    └──────────┘    └─────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                           │
-                           │ When ready
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   PRODUCTION (COSTS GAS)                     │
-│  ┌────────────┐    ┌─────────────────┐    ┌──────────────┐  │
-│  │  Generate  │ -> │  Fund deployer  │ -> │  Deploy to   │  │
-│  │  deployer  │    │  (0.01-0.1 ETH) │    │   mainnet    │  │
-│  └────────────┘    └─────────────────┘    └──────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                     DEVELOPMENT (FREE)                            │
+│  ┌─────────┐    ┌──────────┐    ┌──────────────────────────────┐ │
+│  │  Fork   │ -> │  Deploy  │ -> │  Test with real mainnet state │ │
+│  │ mainnet │    │ to fork  │    │  (Uniswap, Aave, tokens)      │ │
+│  └─────────┘    └──────────┘    └──────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────┘
+                            │
+                            │ When ready
+                            ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                   PRODUCTION (COSTS GAS)                          │
+│  ┌────────────┐    ┌────────────┐    ┌────────────┐    ┌───────┐ │
+│  │  yarn      │ -> │  yarn      │ -> │  Fund with │ -> │ yarn  │ │
+│  │  generate  │    │  account   │    │  0.01 ETH  │    │ deploy│ │
+│  │ (encrypted)│    │ (get addr) │    │            │    │--net..│ │
+│  └────────────┘    └────────────┘    └────────────┘    └───────┘ │
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+**Private keys are NEVER stored in plain text. Always encrypted with your password.**
 
 This is the way.

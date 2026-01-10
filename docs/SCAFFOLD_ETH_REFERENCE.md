@@ -64,8 +64,11 @@ yarn foundry:test
 # Compile contracts
 yarn foundry:build
 
-# Generate contract types
+# Create encrypted deployer account (for mainnet)
 yarn generate
+
+# Show deployer address and balances
+yarn account
 ```
 
 ---
@@ -340,14 +343,34 @@ contract YourContractTest is Test {
 ## Environment Variables
 
 ```bash
-# packages/foundry/.env (for deployments)
-DEPLOYER_PRIVATE_KEY=0x...  # Only for testnet/mainnet
+# packages/foundry/.env
+FORK_URL=https://mainnet.base.org
 ETHERSCAN_API_KEY=...
 
 # packages/nextjs/.env.local (for frontend)
 NEXT_PUBLIC_ALCHEMY_API_KEY=...
 NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=...
 ```
+
+**NEVER put raw private keys in .env files!**
+
+---
+
+## Deployer Account (Mainnet Deployment)
+
+```bash
+# Create encrypted deployer account
+yarn generate
+
+# Show deployer address and balances
+yarn account
+
+# Fund the deployer address, then deploy
+yarn deploy --network base
+```
+
+The `yarn generate` command creates a password-protected keystore.
+Your private key is NEVER stored in plain text.
 
 ---
 

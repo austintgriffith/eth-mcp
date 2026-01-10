@@ -100,40 +100,62 @@ bracket_spacing = true
   );
 
   // Create DeployHelpers.s.sol
+  // NOTE: This uses Anvil's default account for LOCAL development only.
+  // For mainnet deployment, users should run: yarn generate && yarn deploy --network <chain>
   const deployHelpers = `// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
 import "forge-std/Vm.sol";
 
+/**
+ * @title ScaffoldETHDeploy
+ * @notice Deployment helper for Scaffold-ETH 2 projects
+ * 
+ * LOCAL DEVELOPMENT (chainId 31337):
+ *   Uses Anvil's default funded account - no configuration needed.
+ * 
+ * MAINNET DEPLOYMENT:
+ *   DO NOT use this directly. Instead run:
+ *   1. yarn generate - creates encrypted deployer keystore
+ *   2. yarn account - shows deployer address (fund this)
+ *   3. yarn deploy --network base - deploys with keystore
+ */
 contract ScaffoldETHDeploy is Script {
-    error InvalidPrivateKey(string);
+    error InvalidChain(string);
 
     struct Deployment {
         string name;
         address addr;
     }
 
+    // Anvil's default account #0 - ONLY for local development
+    uint256 constant ANVIL_DEFAULT_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+
     string root;
     string path;
     Deployment[] public deployments;
 
     modifier ScaffoldEthDeployerRunner() {
-        uint256 deployerPrivateKey = setupLocalhostEnv();
+        uint256 deployerPrivateKey = getDeployerKey();
         vm.startBroadcast(deployerPrivateKey);
         _;
         vm.stopBroadcast();
         exportDeployments();
     }
 
-    function setupLocalhostEnv() internal view returns (uint256) {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        if (deployerPrivateKey == 0) {
-            revert InvalidPrivateKey(
-                "You don't have a deployer account. Make sure you have set DEPLOYER_PRIVATE_KEY in .env"
-            );
+    function getDeployerKey() internal view returns (uint256) {
+        // For local development (Anvil), use the default funded account
+        if (block.chainid == 31337) {
+            return ANVIL_DEFAULT_KEY;
         }
-        return deployerPrivateKey;
+        
+        // For live networks, this script should NOT be used directly.
+        // Users should run: yarn deploy --network <chain>
+        // which handles keystore-based deployment securely.
+        revert InvalidChain(
+            "For mainnet deployment, use: yarn generate && yarn deploy --network <chain>"
+        );
     }
 
     function exportDeployments() internal {
@@ -153,8 +175,11 @@ contract ScaffoldETHDeploy is Script {
     }
 
     function deployer() internal view returns (address) {
-        uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
-        return vm.addr(deployerPrivateKey);
+        if (block.chainid == 31337) {
+            return vm.addr(ANVIL_DEFAULT_KEY);
+        }
+        // For live networks, deployer address comes from keystore
+        return msg.sender;
     }
 }
 `;
@@ -376,14 +401,28 @@ Requires Foundry CLI tools (forge, anvil) - call stack_install_foundry first if 
         // Remove hardhat package if it exists (we want foundry-only)
         await fs.rm(hardhatPath, { recursive: true, force: true }).catch(() => {});
 
-        // Create/update .env file for foundry with chain RPC and default Anvil key
+        // Create/update .env file for foundry - NO PRIVATE KEYS
+        // Local development uses Anvil's built-in funded accounts
+        // Mainnet deployment uses yarn generate (encrypted keystore)
         const envContent = `# Foundry environment - DO NOT COMMIT THIS FILE
-# Default Anvil private key (only for local development)
-DEPLOYER_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-
 # Chain configuration for forking
 FORK_URL=${chainConfig.rpcUrl}
 CHAIN_ID=${chainConfig.chainId}
+
+# ============================================================
+# DEPLOYER ACCOUNT SECURITY
+# ============================================================
+# DO NOT add DEPLOYER_PRIVATE_KEY here!
+#
+# For LOCAL development:
+#   Uses Anvil's built-in funded accounts automatically.
+#
+# For MAINNET deployment:
+#   1. Run: yarn generate (creates encrypted keystore)
+#   2. Run: yarn account (shows address to fund)
+#   3. Fund the deployer address with ETH
+#   4. Run: yarn deploy --network base
+# ============================================================
 `;
         await fs.writeFile(path.join(foundryPath, ".env"), envContent);
 
@@ -736,6 +775,140 @@ Returns initialization state, component status, URLs, and deployed contracts.`,
     },
     handler: async () => {
       return stateManager.getStatusReport();
+    },
+  },
+
+  /**
+   * stack.generateAccount - Create encrypted deployer account
+   */
+  generateAccount: {
+    name: "stack_generateAccount",
+    description: `Create an encrypted deployer account for mainnet deployment.
+
+This runs 'yarn generate' which:
+- For Foundry: Creates a new keystore in ~/.foundry/keystore (password-protected)
+- For Hardhat: Creates DEPLOYER_PRIVATE_KEY_ENCRYPTED in .env (password-protected)
+
+The user will be prompted to set an encryption password.
+REMEMBER: This password is needed for all future deployments.
+
+After generating, run stack_checkAccount to see the deployer address, then fund it with ETH.`,
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+    handler: async () => {
+      const state = stateManager.getState();
+
+      if (!state.initialized || !state.workspacePath) {
+        return { success: false, error: "Stack not initialized. Run stack_init first." };
+      }
+
+      if (!state.installed) {
+        return { success: false, error: "Dependencies not installed. Run stack_install first." };
+      }
+
+      try {
+        const { stdout, stderr } = await execAsync("yarn generate", {
+          cwd: state.workspacePath,
+          timeout: 60000,
+        });
+
+        return {
+          success: true,
+          message: "Deployer account created successfully",
+          output: stdout,
+          note: stderr || undefined,
+          nextSteps: [
+            "Run stack_checkAccount to see your deployer address",
+            "Fund the deployer address with 0.01-0.1 ETH",
+            "Then run: yarn deploy --network <chain>",
+          ],
+        };
+      } catch (err) {
+        const error = err instanceof Error ? err.message : String(err);
+        return {
+          success: false,
+          error,
+          hint: "You can also run 'yarn generate' manually in the project directory",
+        };
+      }
+    },
+  },
+
+  /**
+   * stack.checkAccount - Show deployer account info
+   */
+  checkAccount: {
+    name: "stack_checkAccount",
+    description: `Show the deployer account address and balances.
+
+This runs 'yarn account' which displays:
+- Deployer address
+- ETH balance on various networks
+
+Use this to:
+1. Get the address to fund before mainnet deployment
+2. Verify the account has enough ETH for gas
+
+Note: May prompt for the encryption password set during yarn generate.`,
+    inputSchema: {
+      type: "object" as const,
+      properties: {},
+      required: [],
+    },
+    handler: async () => {
+      const state = stateManager.getState();
+
+      if (!state.initialized || !state.workspacePath) {
+        return { success: false, error: "Stack not initialized. Run stack_init first." };
+      }
+
+      if (!state.installed) {
+        return { success: false, error: "Dependencies not installed. Run stack_install first." };
+      }
+
+      try {
+        const { stdout, stderr } = await execAsync("yarn account", {
+          cwd: state.workspacePath,
+          timeout: 30000,
+        });
+
+        // Try to extract the address from output
+        const addressMatch = stdout.match(/0x[a-fA-F0-9]{40}/);
+        const address = addressMatch ? addressMatch[0] : null;
+
+        return {
+          success: true,
+          address,
+          output: stdout,
+          note: stderr || undefined,
+          nextSteps: address
+            ? [
+                `Fund ${address} with 0.01-0.1 ETH`,
+                "Then run: yarn deploy --network <chain>",
+              ]
+            : ["Run stack_generateAccount first to create a deployer account"],
+        };
+      } catch (err) {
+        const error = err instanceof Error ? err.message : String(err);
+        
+        // Check if this is a "no account" error
+        if (error.includes("No deployer") || error.includes("generate")) {
+          return {
+            success: false,
+            error: "No deployer account found",
+            hint: "Run stack_generateAccount first to create an encrypted deployer account",
+          };
+        }
+
+        return {
+          success: false,
+          error,
+          hint: "You can also run 'yarn account' manually in the project directory",
+        };
+      }
     },
   },
 };

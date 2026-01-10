@@ -62,6 +62,11 @@ export const prompts: Prompt[] = [
     description: "How to find and compare the best yields using eth-mcp's DefiLlama tools - APY research for vault strategies",
     arguments: [],
   },
+  {
+    name: "education-workflow",
+    description: "How to use eth-mcp's education tools to surface Web3 gotchas and teaching moments during development",
+    arguments: [],
+  },
 ];
 
 /**
@@ -790,6 +795,172 @@ addresses_getProtocol({ chain: "base", protocol: "moonwell" })
 3. **Gas costs**: Factor in deposit/withdraw gas when comparing
 4. **IL risk**: LP positions have impermanent loss risk
 5. **Smart contract risk**: Higher TVL = more eyes = safer (usually)`,
+          },
+        },
+      ];
+
+    case "education-workflow":
+      return [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: "How do I use the education tools to help developers learn Web3 concepts?",
+          },
+        },
+        {
+          role: "assistant",
+          content: {
+            type: "text",
+            text: `# Web3 Education Tools
+
+eth-mcp includes education tools that surface critical Web3 concepts as teaching moments during development. These help developers avoid common gotchas that cause exploits and lost funds.
+
+## The Core Philosophy
+
+Web3 development has unique pitfalls that trip up even experienced developers:
+- **Decimals vary**: USDC has 6 decimals, not 18!
+- **No floating point**: Can't write 5% - use basis points
+- **Nothing is automatic**: Smart contracts can't execute themselves
+- **Incentives matter**: Why would anyone call your function?
+
+The education tools surface these lessons at the right moment.
+
+## Available Tools
+
+### 1. education_suggestLessons
+**Use at the START of any project.** Analyzes a description and suggests relevant lessons.
+
+\`\`\`
+education_suggestLessons({ 
+  description: "Build a USDC vault with 5% APY distributed daily" 
+})
+\`\`\`
+
+Returns:
+- CRITICAL: USDC has 6 decimals
+- CRITICAL: No floats - use basis points for 5%
+- CRITICAL: Who triggers "daily" distribution?
+
+### 2. education_getChecklist
+**Walk through category-specific questions.** Interactive checklist format.
+
+\`\`\`
+education_getChecklist({ category: "automation" })
+\`\`\`
+
+Categories:
+- \`tokens\`: Decimals, approvals, transfers
+- \`math\`: Percentages, rounding, precision
+- \`automation\`: Triggers, keepers, incentives (MOST IMPORTANT!)
+- \`security\`: Reentrancy, access control, oracles
+- \`vaults\`: ERC-4626, inflation attacks, accounting
+- \`defi\`: MEV, slippage, protocol integration
+- \`all\`: Complete review
+
+### 3. education_explainLesson
+**Deep dive into a specific lesson.** Shows the "why" with code examples.
+
+\`\`\`
+education_explainLesson({ lessonId: "nothing-automatic" })
+\`\`\`
+
+Returns:
+- Full explanation of the concept
+- Code example of the WRONG way
+- Code example of the RIGHT way
+- Links to related docs
+
+### 4. education_getCriticalLessons
+**Get all critical lessons at once.** The must-know gotchas.
+
+\`\`\`
+education_getCriticalLessons({})
+\`\`\`
+
+Use before ANY mainnet deployment!
+
+### 5. education_listCategories
+**See all categories and lesson counts.**
+
+\`\`\`
+education_listCategories({})
+\`\`\`
+
+## Recommended Workflow
+
+### When Starting a New Project
+
+1. **Understand the intent**: What is the user trying to build?
+2. **Suggest lessons early**: 
+   \`\`\`
+   education_suggestLessons({ description: "[user's project description]" })
+   \`\`\`
+3. **Surface critical issues**: Share the warnings BEFORE writing code
+4. **Explain when asked**: Use explainLesson for deep dives
+
+### When Building Specific Features
+
+| Feature | Checklist to Use |
+|---------|------------------|
+| Token handling | \`tokens\` |
+| Fee calculations | \`math\` |
+| Scheduled tasks | \`automation\` |
+| Yield vaults | \`vaults\` |
+| DEX integration | \`defi\` |
+| Any external calls | \`security\` |
+
+### Before Deployment
+
+ALWAYS run:
+\`\`\`
+education_getCriticalLessons({})
+\`\`\`
+
+Walk through each critical lesson with the developer.
+
+## Example: Teaching Moment
+
+**User says**: "Build me a staking contract that distributes rewards daily"
+
+**You should**:
+1. Call \`education_suggestLessons({ description: "staking contract distributes rewards daily" })\`
+2. You'll get back the "nothing-automatic" lesson as critical
+3. Share with user: "Quick note - in Web3, 'daily' doesn't work like a cron job. Let me explain how to handle this..."
+4. If they want details: \`education_explainLesson({ lessonId: "nothing-automatic" })\`
+
+This turns a potential bug into a learning moment!
+
+## Key Lessons to Know
+
+### CRITICAL Lessons (memorize these!)
+
+1. **decimals-vary**: USDC = 6, not 18
+2. **no-decimals**: Use basis points (10000 = 100%)
+3. **nothing-automatic**: Who calls? Why?
+4. **reentrancy**: CEI pattern + guards
+5. **oracle-manipulation**: Never use spot DEX price
+6. **inflation-attack**: First depositor vulnerability
+
+### The Most Important Concept
+
+**INCENTIVES** - The automation category is the most important.
+
+Every on-chain function needs someone to:
+1. Send a transaction
+2. Pay gas
+3. Have a reason to do it
+
+If you can't answer "why would anyone call this?", the function is dead code.
+
+## Teaching Style
+
+- **Short first**: Start with the one-line warning
+- **Explain on request**: Offer to go deeper
+- **Show code**: Wrong vs right examples are powerful
+- **Connect to their project**: "In your vault, this means..."
+
+The goal is not to lecture, but to surface the right lesson at the right moment.`,
           },
         },
       ];
