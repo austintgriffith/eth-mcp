@@ -1,0 +1,6 @@
+[submodule "p3/packages/foundry/lib/openzeppelin-contracts"]
+	path = p3/packages/foundry/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "p3/packages/foundry/lib/forge-std"]
+	path = p3/packages/foundry/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
