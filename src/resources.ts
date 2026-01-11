@@ -277,6 +277,349 @@ REFERENCE: Etherscan, GitHub Settings, Stripe Dashboard, GOV.UK
 `;
 
 /**
+ * Uniswap V4 Integration Guide - Battle-tested patterns and gotchas
+ */
+const UNISWAP_V4_GUIDE = `# Uniswap V4 Integration Guide
+
+Use this guide to build V4 swap functionality without trial and error.
+These patterns are battle-tested from real debugging sessions.
+
+---
+
+## The #1 Gotcha: settle() Has NO Parameters!
+
+This is the most common V4 bug. The error \`0x5212cba1\` means wrong function signature.
+
+\`\`\`solidity
+// WRONG - will fail with error 0x5212cba1
+poolManager.settle(currency);
+
+// CORRECT - V4's actual signature
+poolManager.settle();  // No parameter!
+\`\`\`
+
+The \`sync()\` function tells PoolManager which currency you're about to pay.
+Then \`settle()\` (with no args) settles that synced currency.
+
+---
+
+## Correct Payment Pattern
+
+Order matters! This is the only sequence that works:
+
+\`\`\`solidity
+poolManager.sync(currency);                    // 1. Tell PM which currency
+IERC20(token).transfer(poolManager, amount);   // 2. Transfer tokens
+poolManager.settle();                          // 3. Settle (NO PARAM!)
+\`\`\`
+
+---
+
+## V4 Architecture: Unlock/Callback Pattern
+
+You CANNOT call \`swap()\` directly on PoolManager. Must use unlock pattern:
+
+\`\`\`
+User -> SwapHelper.swap()
+         -> poolManager.unlock(data)
+              -> SwapHelper.unlockCallback()
+                   -> poolManager.swap()
+                   -> sync/transfer/settle
+                   -> poolManager.take()
+         <- returns result
+\`\`\`
+
+Your contract must implement \`unlockCallback(bytes calldata) external returns (bytes memory)\`.
+
+---
+
+## Complete IPoolManager Interface
+
+\`\`\`solidity
+interface IPoolManager {
+    struct SwapParams {
+        bool zeroForOne;
+        int256 amountSpecified;  // Negative = exact input
+        uint160 sqrtPriceLimitX96;
+    }
+
+    function unlock(bytes calldata data) external returns (bytes memory);
+    function swap(PoolKey memory key, SwapParams memory params, bytes calldata hookData) 
+        external returns (BalanceDelta);
+    function sync(Currency currency) external;
+    function settle() external payable returns (uint256);  // NO CURRENCY PARAM!
+    function take(Currency currency, address to, uint256 amount) external;
+}
+\`\`\`
+
+---
+
+## PoolKey Construction
+
+Currency0 MUST be less than Currency1 (sorted by address):
+
+\`\`\`solidity
+(address c0, address c1) = tokenA < tokenB 
+    ? (tokenA, tokenB) 
+    : (tokenB, tokenA);
+
+PoolKey memory poolKey = PoolKey({
+    currency0: Currency.wrap(c0),
+    currency1: Currency.wrap(c1),
+    fee: 3000,        // 0.3%
+    tickSpacing: 60,  // Standard for 0.3% fee tier
+    hooks: IHooks(address(0)) // No hooks
+});
+\`\`\`
+
+---
+
+## Swap Direction Logic
+
+\`\`\`solidity
+bool zeroForOne = tokenIn < tokenOut;
+
+if (zeroForOne) {
+    // Swapping currency0 -> currency1
+    // delta.amount0() is negative (we pay)
+    // delta.amount1() is positive (we receive)
+    _payToken(tokenIn, uint256(-delta.amount0()), currency0);
+    poolManager.take(currency1, recipient, uint256(delta.amount1()));
+} else {
+    // Swapping currency1 -> currency0
+    // delta.amount1() is negative (we pay)
+    // delta.amount0() is positive (we receive)
+    _payToken(tokenIn, uint256(-delta.amount1()), currency1);
+    poolManager.take(currency0, recipient, uint256(delta.amount0()));
+}
+\`\`\`
+
+---
+
+## Stack Too Deep Fix
+
+V4 callbacks hit "stack too deep" easily. Split into helper functions:
+
+\`\`\`solidity
+function unlockCallback(bytes calldata data) external returns (bytes memory) {
+    // Decode, build poolKey, execute swap
+    BalanceDelta delta = poolManager.swap(poolKey, swapParams, "");
+    return _settleSwap(params, delta, currency0, currency1);  // Separate function!
+}
+
+function _settleSwap(...) internal returns (bytes memory) {
+    // Handle settlement logic here
+}
+
+function _payToken(address token, uint256 amount, Currency currency) internal {
+    poolManager.sync(currency);
+    IERC20(token).transfer(address(poolManager), amount);
+    poolManager.settle();
+}
+\`\`\`
+
+---
+
+## V4 Contract Addresses
+
+### Base Mainnet (Chain ID: 8453)
+\`\`\`solidity
+address constant POOL_MANAGER     = 0x498581fF718922c3f8e6A244956aF099B2652b2b;
+address constant POSITION_MANAGER = 0x7C5f5A4bBd8fD63184577525326123B519429bDc;
+address constant QUOTER           = 0x0d5e0f971ed27fbff6c2837bf31316121532048d;
+address constant STATE_VIEW       = 0xa3c0c9b65bad0b08107aa264b0f3db444b867a71;
+address constant PERMIT2          = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+\`\`\`
+
+### Ethereum Mainnet (Chain ID: 1)
+\`\`\`solidity
+address constant POOL_MANAGER     = 0x000000000004444c5dc75cB358380D2e3dE08A90;
+address constant POSITION_MANAGER = 0x4529a01c7a0410167c5740c487a8de60232617bf;
+address constant QUOTER           = 0x333e3c607b141b18ff6de9f258db6e77fe7491e0;
+address constant PERMIT2          = 0x000000000022D473030F116dDEE9F6B43aC78BA3;
+\`\`\`
+
+---
+
+## Gas Limits
+
+| Operation | Recommended Gas |
+|-----------|----------------|
+| V4 Swap | 500,000 |
+| Pool initialization + liquidity add | 2,000,000 - 2,500,000 |
+| ERC20 approve | 50,000 |
+
+---
+
+## Frontend Integration (Scaffold-ETH 2)
+
+\`\`\`typescript
+// Setup
+const { writeContractAsync: writeSwapHelper } = useScaffoldWriteContract({ 
+    contractName: "SwapHelper" 
+});
+
+// Execute swap
+await writeContractAsync({
+    functionName: "swap",
+    args: [
+        USDC_ADDRESS,      // tokenIn
+        tokenAddress,      // tokenOut
+        3000,              // fee (0.3%)
+        amountIn,
+        0n,                // minAmountOut - use 0 for testing!
+    ],
+    gas: 500_000n,
+});
+\`\`\`
+
+---
+
+## Common Errors and Fixes
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| \`0x5212cba1\` | Wrong settle() signature | Use \`settle()\` not \`settle(currency)\` |
+| "Insufficient output" | minAmountOut too strict | Use 0 for testing, add slippage later |
+| "Stack too deep" | Too many local variables | Split into helper functions |
+| Silent revert | Wrong sync/settle order | Must be: sync -> transfer -> settle |
+| Pool not found | Wrong currency order | Ensure currency0 < currency1 |
+
+---
+
+## Testing Workflow
+
+1. \`yarn deploy\` - Deploy contracts including SwapHelper
+2. Create token via TokenFactory (if applicable)
+3. Fund wallet with USDC (impersonate whale on fork)
+4. Test swap functionality
+5. **Test CLI first:**
+   \`\`\`bash
+   cast send $SWAP_HELPER "swap(address,address,uint24,uint256,uint256)" \\
+       $USDC $TOKEN 3000 100000 0 \\
+       --private-key $KEY --gas-limit 500000 --rpc-url http://localhost:8545
+   \`\`\`
+6. Then test frontend
+
+---
+
+## Key Takeaways
+
+1. **settle() has NO parameters** - sync() sets currency, settle() uses it
+2. **Order matters**: sync -> transfer -> settle
+3. **Currency0 < Currency1** - Always sort addresses
+4. **V4 is callback-based** - Use unlock pattern, not direct calls
+5. **Gas is higher** - V4 swaps ~300k-500k, pool init ~2M
+6. **Test CLI first** - Debug contracts before frontend
+7. **Use 0 for minAmountOut** - Add slippage protection after it works
+8. **Split functions** - Avoid stack too deep errors
+
+---
+
+## Example SwapHelper Contract
+
+\`\`\`solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+
+import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.sol";
+import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
+import {Currency} from "@uniswap/v4-core/contracts/types/Currency.sol";
+import {BalanceDelta} from "@uniswap/v4-core/contracts/types/BalanceDelta.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract SwapHelper {
+    IPoolManager public immutable poolManager;
+    
+    constructor(address _poolManager) {
+        poolManager = IPoolManager(_poolManager);
+    }
+    
+    function swap(
+        address tokenIn,
+        address tokenOut,
+        uint24 fee,
+        uint256 amountIn,
+        uint256 minAmountOut
+    ) external returns (uint256 amountOut) {
+        // Transfer tokens from user
+        IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn);
+        
+        // Encode swap params for callback
+        bytes memory data = abi.encode(
+            msg.sender,
+            tokenIn,
+            tokenOut,
+            fee,
+            amountIn,
+            minAmountOut
+        );
+        
+        // Unlock triggers our callback
+        bytes memory result = poolManager.unlock(data);
+        amountOut = abi.decode(result, (uint256));
+    }
+    
+    function unlockCallback(bytes calldata data) external returns (bytes memory) {
+        require(msg.sender == address(poolManager), "Only PoolManager");
+        
+        (
+            address recipient,
+            address tokenIn,
+            address tokenOut,
+            uint24 fee,
+            uint256 amountIn,
+            uint256 minAmountOut
+        ) = abi.decode(data, (address, address, address, uint24, uint256, uint256));
+        
+        // Build pool key (currencies must be sorted!)
+        (address c0, address c1) = tokenIn < tokenOut 
+            ? (tokenIn, tokenOut) 
+            : (tokenOut, tokenIn);
+        
+        PoolKey memory poolKey = PoolKey({
+            currency0: Currency.wrap(c0),
+            currency1: Currency.wrap(c1),
+            fee: fee,
+            tickSpacing: 60,
+            hooks: IHooks(address(0))
+        });
+        
+        bool zeroForOne = tokenIn < tokenOut;
+        
+        // Execute swap
+        BalanceDelta delta = poolManager.swap(
+            poolKey,
+            IPoolManager.SwapParams({
+                zeroForOne: zeroForOne,
+                amountSpecified: -int256(amountIn), // Negative = exact input
+                sqrtPriceLimitX96: zeroForOne ? MIN_SQRT_PRICE + 1 : MAX_SQRT_PRICE - 1
+            }),
+            ""
+        );
+        
+        // Settle: pay input token
+        Currency currencyIn = Currency.wrap(tokenIn);
+        poolManager.sync(currencyIn);
+        IERC20(tokenIn).transfer(address(poolManager), amountIn);
+        poolManager.settle();  // NO PARAM!
+        
+        // Take: receive output token
+        Currency currencyOut = Currency.wrap(tokenOut);
+        uint256 amountOut = zeroForOne 
+            ? uint256(int256(delta.amount1())) 
+            : uint256(int256(delta.amount0()));
+        
+        require(amountOut >= minAmountOut, "Insufficient output");
+        poolManager.take(currencyOut, recipient, amountOut);
+        
+        return abi.encode(amountOut);
+    }
+}
+\`\`\`
+`;
+
+/**
  * Token Whale Funding Guide - For funding test wallets on forks
  */
 const WHALE_FUNDING_GUIDE = `# Funding Test Wallets with Tokens on Forks
@@ -467,6 +810,12 @@ export const resourceDefinitions: Resource[] = [
     description: "CRITICAL: Whale addresses for funding test wallets with tokens (USDC, WETH, etc.) on Anvil forks. Includes one-shot cast commands.",
     mimeType: "text/plain",
   },
+  {
+    uri: "resource://uniswap/v4-guide",
+    name: "Uniswap V4 Integration Guide",
+    description: "CRITICAL: Complete V4 swap integration guide with gotchas, correct patterns, and addresses. READ THIS before building any V4 integration. Includes the #1 bug: settle() has NO parameters!",
+    mimeType: "text/plain",
+  },
 ];
 
 /**
@@ -648,6 +997,14 @@ Only use testnet if user insists after explanation.`,
   if (uri === "resource://funding/whales") {
     return {
       content: WHALE_FUNDING_GUIDE,
+      mimeType: "text/plain",
+    };
+  }
+
+  // Uniswap V4 integration guide
+  if (uri === "resource://uniswap/v4-guide") {
+    return {
+      content: UNISWAP_V4_GUIDE,
       mimeType: "text/plain",
     };
   }

@@ -169,6 +169,11 @@ export const ETHEREUM_MAINNET: ChainAddresses = {
       quoterV2: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
       positionManager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
     },
+    uniswapV4: {
+      poolManager: "0x000000000004444c5dc75cB358380D2e3dE08A90",
+      positionManager: "0x4529a01c7a0410167c5740c487a8de60232617bf",
+      quoter: "0x333e3c607b141b18ff6de9f258db6e77fe7491e0",
+    },
     sushiswap: {
       factory: "0xC0AEe478e3658e2610c5F7A4A2E1777cE9e4f2Ac",
       router: "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F",
@@ -267,6 +272,40 @@ export const ETHEREUM_MAINNET: ChainAddresses = {
       endpoint: "0x66A71Dcef29A0fFBDBE3c6a460a3B5BC225Cd675",
       ultraLightNodeV2: "0x4D73AdB72bC3DD368966edD0f0b2148401A178E2",
     },
+    // Infrastructure - Canonical addresses (same across all chains)
+    permit2: {
+      permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    },
+    universalRouter: {
+      router: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
+    },
+    multicall: {
+      multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+    create2: {
+      deployer: "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+    },
+    safe: {
+      proxyFactory: "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
+      singleton: "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+      fallbackHandler: "0xf48f2B2d2a534e402487b3ee7C18c33Aec0Fe5e4",
+    },
+    // Account Abstraction (ERC-4337)
+    entryPoint: {
+      v06: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+      v07: "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+    },
+    // Aggregators
+    oneInch: {
+      routerV6: "0x111111125421cA6dc452d289314280a0f8842A65",
+    },
+    zeroX: {
+      exchangeProxy: "0xDef1C0ded9bec7F1a1670819833240f027b25EfF",
+    },
+    // Oracles
+    pyth: {
+      priceFeed: "0x4305FB66699C3B2702D4d05CF36551390A4c69C6",
+    },
   },
 };
 
@@ -351,6 +390,12 @@ export const BASE: ChainAddresses = {
       quoterV2: "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a",
       positionManager: "0x03a520b32C04BF3bEEf7BEb72E919cf822Ed34f1",
     },
+    uniswapV4: {
+      poolManager: "0x498581fF718922c3f8e6A244956aF099B2652b2b",
+      positionManager: "0x7C5f5A4bBd8fD63184577525326123B519429bDc",
+      quoter: "0x0d5e0f971ed27fbff6c2837bf31316121532048d",
+      stateView: "0xa3c0c9b65bad0b08107aa264b0f3db444b867a71",
+    },
     aerodrome: {
       router: "0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43",
       factory: "0x420DD381b31aEf6683db6B902084cB0FFECe40Da",
@@ -397,6 +442,43 @@ export const BASE: ChainAddresses = {
     },
     layerZero: {
       endpoint: "0xb6319cC6c8c27A8F5dAF0dD3DF91EA35C4720dd7",
+    },
+    // Infrastructure - Canonical addresses
+    permit2: {
+      permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    },
+    universalRouter: {
+      router: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
+    },
+    multicall: {
+      multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+    create2: {
+      deployer: "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+    },
+    safe: {
+      proxyFactory: "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
+      singleton: "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+    },
+    // Account Abstraction (ERC-4337)
+    entryPoint: {
+      v06: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+      v07: "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+    },
+    // Aggregators
+    oneInch: {
+      routerV6: "0x111111125421cA6dc452d289314280a0f8842A65",
+    },
+    zeroX: {
+      exchangeProxy: "0xDef1C0ded9bec7F1a1670819833240f027b25EfF",
+    },
+    // Oracles
+    pyth: {
+      priceFeed: "0x8250f4aF4B972684F7b336503E2D6dFeDeB1487a",
+    },
+    // Chainlink Automation
+    chainlinkAutomation: {
+      registry: "0xE226D5aCae908252CcA3F6CEFa577527650a9e1e",
     },
   },
 };
@@ -489,6 +571,11 @@ export const OPTIMISM: ChainAddresses = {
       quoterV2: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
       positionManager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
     },
+    uniswapV4: {
+      poolManager: "0x9a13f98cb987694c9f086b1f5eb990eea8264ec3",
+      positionManager: "0x3c3ea4b57a46241e54610e5f022e5c45859a1017",
+      quoter: "0x1f3131a13296fb91c90870043742c3cdbff1a8d7",
+    },
     velodrome: {
       router: "0xa062aE8A9c5e11aaA026fc2670B0D65cCc8B2858",
       factory: "0xF1046053aa5682b4F9a81b5481394DA16BE5FF5a",
@@ -518,6 +605,39 @@ export const OPTIMISM: ChainAddresses = {
     },
     layerZero: {
       endpoint: "0x3c2269811836af69497E5F486A85D7316753cf62",
+    },
+    // Infrastructure - Canonical addresses
+    permit2: {
+      permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    },
+    universalRouter: {
+      router: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
+    },
+    multicall: {
+      multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+    create2: {
+      deployer: "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+    },
+    safe: {
+      proxyFactory: "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
+      singleton: "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+    },
+    // Account Abstraction (ERC-4337)
+    entryPoint: {
+      v06: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+      v07: "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+    },
+    // Aggregators
+    oneInch: {
+      routerV6: "0x111111125421cA6dc452d289314280a0f8842A65",
+    },
+    zeroX: {
+      exchangeProxy: "0xDef1C0ded9bec7F1a1670819833240f027b25EfF",
+    },
+    // Oracles
+    pyth: {
+      priceFeed: "0xff1a0f4744e8582DF1aE09D5611b887B6a12925C",
     },
   },
 };
@@ -622,6 +742,11 @@ export const ARBITRUM: ChainAddresses = {
       quoterV2: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e",
       positionManager: "0xC36442b4a4522E871399CD717aBDD847Ab11FE88",
     },
+    uniswapV4: {
+      poolManager: "0x360e68faccca8ca495c1b759fd9eee466db9fb32",
+      positionManager: "0x3c3ea4b57a46241e54610e5f022e5c45859a1017",
+      quoter: "0x1f3131a13296fb91c90870043742c3cdbff1a8d7",
+    },
     camelot: {
       router: "0xc873fEcbd354f5A56E00E710B90EF4201db2448d",
       factory: "0x6EcCab422D763aC031210895C81787E87B43A652",
@@ -664,6 +789,39 @@ export const ARBITRUM: ChainAddresses = {
     },
     layerZero: {
       endpoint: "0x3c2269811836af69497E5F486A85D7316753cf62",
+    },
+    // Infrastructure - Canonical addresses
+    permit2: {
+      permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    },
+    universalRouter: {
+      router: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
+    },
+    multicall: {
+      multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+    create2: {
+      deployer: "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+    },
+    safe: {
+      proxyFactory: "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
+      singleton: "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+    },
+    // Account Abstraction (ERC-4337)
+    entryPoint: {
+      v06: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+      v07: "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+    },
+    // Aggregators
+    oneInch: {
+      routerV6: "0x111111125421cA6dc452d289314280a0f8842A65",
+    },
+    zeroX: {
+      exchangeProxy: "0xDef1C0ded9bec7F1a1670819833240f027b25EfF",
+    },
+    // Oracles
+    pyth: {
+      priceFeed: "0xff1a0f4744e8582DF1aE09D5611b887B6a12925C",
     },
   },
 };
@@ -760,6 +918,39 @@ export const POLYGON: ChainAddresses = {
     },
     layerZero: {
       endpoint: "0x3c2269811836af69497E5F486A85D7316753cf62",
+    },
+    // Infrastructure - Canonical addresses
+    permit2: {
+      permit2: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+    },
+    universalRouter: {
+      router: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
+    },
+    multicall: {
+      multicall3: "0xcA11bde05977b3631167028862bE2a173976CA11",
+    },
+    create2: {
+      deployer: "0x4e59b44847b379578588920cA78FbF26c0B4956C",
+    },
+    safe: {
+      proxyFactory: "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
+      singleton: "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+    },
+    // Account Abstraction (ERC-4337)
+    entryPoint: {
+      v06: "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
+      v07: "0x0000000071727De22E5E9d8BAf0edAc6f37da032",
+    },
+    // Aggregators
+    oneInch: {
+      routerV6: "0x111111125421cA6dc452d289314280a0f8842A65",
+    },
+    zeroX: {
+      exchangeProxy: "0xDef1C0ded9bec7F1a1670819833240f027b25EfF",
+    },
+    // Oracles
+    pyth: {
+      priceFeed: "0xff1a0f4744e8582DF1aE09D5611b887B6a12925C",
     },
   },
 };

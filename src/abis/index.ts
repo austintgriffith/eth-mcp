@@ -6,7 +6,7 @@
  * - ERC721 NFTs
  * - ERC4626 vaults
  * - Aave V3 lending
- * - Uniswap V2/V3 swaps
+ * - Uniswap V2/V3/V4 swaps
  */
 
 import { ERC20_ABI } from "./erc20.js";
@@ -14,6 +14,7 @@ import { ERC721_ABI } from "./erc721.js";
 import { ERC4626_ABI } from "./erc4626.js";
 import { AAVE_V3_POOL_ABI, AAVE_V3_POOL_DATA_PROVIDER_ABI } from "./aave.js";
 import { UNISWAP_V3_ROUTER_ABI, UNISWAP_V3_QUOTER_ABI, UNISWAP_V2_ROUTER_ABI } from "./uniswap.js";
+import { UNISWAP_V4_POOL_MANAGER_ABI, UNISWAP_V4_QUOTER_ABI, V4_CONSTANTS, buildPoolKey } from "./uniswapV4.js";
 
 // Re-export individual ABIs
 export { ERC20_ABI } from "./erc20.js";
@@ -21,6 +22,7 @@ export { ERC721_ABI } from "./erc721.js";
 export { ERC4626_ABI } from "./erc4626.js";
 export { AAVE_V3_POOL_ABI, AAVE_V3_POOL_DATA_PROVIDER_ABI } from "./aave.js";
 export { UNISWAP_V3_ROUTER_ABI, UNISWAP_V3_QUOTER_ABI, UNISWAP_V2_ROUTER_ABI } from "./uniswap.js";
+export { UNISWAP_V4_POOL_MANAGER_ABI, UNISWAP_V4_QUOTER_ABI, V4_CONSTANTS, buildPoolKey } from "./uniswapV4.js";
 
 /**
  * Contract type to ABI mapping
@@ -33,7 +35,9 @@ export type ContractType =
   | "AaveV3PoolDataProvider"
   | "UniswapV3Router"
   | "UniswapV3Quoter"
-  | "UniswapV2Router";
+  | "UniswapV2Router"
+  | "UniswapV4PoolManager"
+  | "UniswapV4Quoter";
 
 /**
  * Get ABI by contract type
@@ -56,6 +60,10 @@ export function getAbiByType(type: ContractType): readonly unknown[] | null {
       return UNISWAP_V3_QUOTER_ABI;
     case "UniswapV2Router":
       return UNISWAP_V2_ROUTER_ABI;
+    case "UniswapV4PoolManager":
+      return UNISWAP_V4_POOL_MANAGER_ABI;
+    case "UniswapV4Quoter":
+      return UNISWAP_V4_QUOTER_ABI;
     default:
       return null;
   }
@@ -73,6 +81,8 @@ export const CONTRACT_TYPES: Record<ContractType, string> = {
   UniswapV3Router: "Uniswap V3 swap router",
   UniswapV3Quoter: "Uniswap V3 quoter (get swap quotes)",
   UniswapV2Router: "Uniswap V2 style router (also Sushi, Quick, etc.)",
+  UniswapV4PoolManager: "Uniswap V4 PoolManager (CRITICAL: settle() has NO params! Use unlock/callback pattern)",
+  UniswapV4Quoter: "Uniswap V4 quoter (get swap quotes)",
 };
 
 /**

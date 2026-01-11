@@ -18,7 +18,7 @@ export interface Lesson {
   relatedDocs?: string[]; // Links to docs
 }
 
-export type Category = "tokens" | "math" | "automation" | "security" | "vaults" | "defi" | "scaffold-eth";
+export type Category = "tokens" | "math" | "automation" | "security" | "vaults" | "defi" | "scaffold-eth" | "uniswap-v4";
 
 export const CATEGORY_INFO: Record<Category, { name: string; description: string }> = {
   tokens: {
@@ -48,6 +48,10 @@ export const CATEGORY_INFO: Record<Category, { name: string; description: string
   "scaffold-eth": {
     name: "Scaffold-ETH Workflow",
     description: "Debug UI, external contracts, and SE2 development patterns",
+  },
+  "uniswap-v4": {
+    name: "Uniswap V4 Integration",
+    description: "V4 swap patterns, unlock callbacks, settle() gotchas, and currency ordering",
   },
 };
 
@@ -1051,6 +1055,228 @@ const externalContracts = {
     severity: "medium",
     keywords: ["external", "usdc", "aave", "uniswap", "debug", "ui", "scaffold", "contracts", "integrate", "protocol"],
     relatedDocs: ["docs/SCAFFOLD_ETH_REFERENCE.md"],
+  },
+
+  // ============================================
+  // UNISWAP V4
+  // ============================================
+  {
+    id: "v4-settle-no-params",
+    category: "uniswap-v4",
+    question: "Are you calling settle() correctly? V4's settle() has NO parameters!",
+    short: "Error 0x5212cba1 means wrong signature. Use settle(), NOT settle(currency).",
+    explanation: `This is the #1 Uniswap V4 gotcha that causes hours of debugging.
+
+The error \`0x5212cba1\` means you're calling the wrong function signature.
+
+In V4, the payment pattern is:
+1. Call sync(currency) to tell PoolManager which currency you're paying
+2. Transfer tokens to PoolManager
+3. Call settle() with NO PARAMETERS
+
+The sync() function "sets up" which currency will be settled. Then settle() finalizes it.
+
+This is completely different from what you might expect (passing the currency to settle).`,
+    wrongExample: `// WRONG - will fail with error 0x5212cba1
+poolManager.settle(currency);  // V4 settle() has no params!
+
+// WRONG - common assumption
+poolManager.settle(Currency.wrap(tokenAddress));`,
+    rightExample: `// RIGHT - V4's actual pattern
+poolManager.sync(currency);                    // 1. Tell PM which currency
+IERC20(token).transfer(poolManager, amount);   // 2. Transfer tokens
+poolManager.settle();                          // 3. Settle (NO PARAM!)
+
+// The sync() "primes" the settlement, settle() finalizes it`,
+    severity: "critical",
+    keywords: ["uniswap", "v4", "settle", "sync", "0x5212cba1", "swap", "pool", "manager"],
+    relatedDocs: ["resource://uniswap/v4-guide"],
+  },
+  {
+    id: "v4-payment-order",
+    category: "uniswap-v4",
+    question: "Are you paying tokens in the correct order? sync -> transfer -> settle",
+    short: "V4 requires: sync(currency), transfer tokens, then settle(). Order matters!",
+    explanation: `The order of operations for paying tokens in V4 is strict:
+
+1. sync(currency) - Tells PoolManager which currency you're about to pay
+2. transfer() - Actually send the tokens to PoolManager
+3. settle() - Finalize the payment (with NO parameters!)
+
+If you get this order wrong, the transaction will silently revert or fail.
+
+This pattern exists because V4 uses a "flash accounting" system where all debits and credits must balance within the unlock callback.`,
+    wrongExample: `// WRONG - transfer before sync
+IERC20(token).transfer(poolManager, amount);
+poolManager.sync(currency);
+poolManager.settle();
+
+// WRONG - missing sync entirely
+IERC20(token).transfer(poolManager, amount);
+poolManager.settle(currency);  // Also wrong: settle has no params!`,
+    rightExample: `// RIGHT - correct order
+function _payToken(address token, uint256 amount, Currency currency) internal {
+    poolManager.sync(currency);                           // 1. Sync first
+    IERC20(token).transfer(address(poolManager), amount); // 2. Transfer
+    poolManager.settle();                                 // 3. Settle (no params!)
+}`,
+    severity: "critical",
+    keywords: ["uniswap", "v4", "sync", "settle", "transfer", "order", "payment", "token"],
+    relatedDocs: ["resource://uniswap/v4-guide"],
+  },
+  {
+    id: "v4-unlock-pattern",
+    category: "uniswap-v4",
+    question: "Are you using the unlock/callback pattern? You CANNOT call swap() directly on PoolManager.",
+    short: "V4 requires unlock() -> unlockCallback() pattern. No direct swap() calls.",
+    explanation: `Uniswap V4 uses a callback-based architecture. You CANNOT call swap() directly.
+
+The flow is:
+1. Your contract calls poolManager.unlock(data)
+2. PoolManager calls back to YOUR contract's unlockCallback(data)
+3. Inside unlockCallback, you call swap(), sync(), settle(), take()
+4. PoolManager verifies all debits/credits balance before returning
+
+Your contract MUST implement:
+\`function unlockCallback(bytes calldata data) external returns (bytes memory)\`
+
+This "flash accounting" pattern allows for gas-efficient multi-hop swaps and complex DeFi operations.`,
+    wrongExample: `// WRONG - cannot call swap directly
+function doSwap() external {
+    poolManager.swap(poolKey, params, "");  // This will FAIL!
+}
+
+// WRONG - trying to settle outside of callback
+function doSwap() external {
+    poolManager.settle();  // Not in unlock context!
+}`,
+    rightExample: `// RIGHT - use unlock/callback pattern
+function swap(address tokenIn, address tokenOut, uint256 amountIn) external {
+    bytes memory data = abi.encode(msg.sender, tokenIn, tokenOut, amountIn);
+    poolManager.unlock(data);  // This triggers our callback
+}
+
+function unlockCallback(bytes calldata data) external returns (bytes memory) {
+    require(msg.sender == address(poolManager), "Only PoolManager");
+    
+    // NOW we can call swap, settle, take, etc.
+    BalanceDelta delta = poolManager.swap(poolKey, params, "");
+    
+    // Pay input token
+    poolManager.sync(currencyIn);
+    IERC20(tokenIn).transfer(address(poolManager), amountIn);
+    poolManager.settle();
+    
+    // Receive output token
+    poolManager.take(currencyOut, recipient, amountOut);
+    
+    return abi.encode(amountOut);
+}`,
+    severity: "critical",
+    keywords: ["uniswap", "v4", "unlock", "callback", "swap", "pattern", "flash"],
+    relatedDocs: ["resource://uniswap/v4-guide"],
+  },
+  {
+    id: "v4-currency-order",
+    category: "uniswap-v4",
+    question: "Is currency0 < currency1? PoolKey requires sorted addresses.",
+    short: "PoolKey: currency0 MUST be less than currency1 (sorted by address).",
+    explanation: `In Uniswap V4, when constructing a PoolKey, the currencies MUST be sorted by address.
+
+currency0.address < currency1.address (always!)
+
+If you get this wrong, you'll get "Pool not found" errors because you're looking for a pool that doesn't exist (pools are identified by their sorted key).
+
+This is different from your "tokenIn/tokenOut" which can be in any order - those determine swap direction (zeroForOne), but the PoolKey itself must be sorted.`,
+    wrongExample: `// WRONG - using unsorted addresses
+PoolKey memory poolKey = PoolKey({
+    currency0: Currency.wrap(tokenIn),   // Might be > tokenOut!
+    currency1: Currency.wrap(tokenOut),
+    fee: 3000,
+    tickSpacing: 60,
+    hooks: IHooks(address(0))
+});
+// Will fail with "Pool not found" if tokenIn > tokenOut`,
+    rightExample: `// RIGHT - always sort currencies
+(address c0, address c1) = tokenA < tokenB 
+    ? (tokenA, tokenB) 
+    : (tokenB, tokenA);
+
+PoolKey memory poolKey = PoolKey({
+    currency0: Currency.wrap(c0),  // Always the smaller address
+    currency1: Currency.wrap(c1),  // Always the larger address
+    fee: 3000,
+    tickSpacing: 60,
+    hooks: IHooks(address(0))
+});
+
+// Swap direction is separate:
+bool zeroForOne = tokenIn < tokenOut;  // true if swapping c0->c1`,
+    severity: "high",
+    keywords: ["uniswap", "v4", "currency", "poolkey", "sorted", "order", "address", "pool"],
+    relatedDocs: ["resource://uniswap/v4-guide"],
+  },
+  {
+    id: "v4-stack-too-deep",
+    category: "uniswap-v4",
+    question: "Getting 'stack too deep'? V4 callbacks need helper functions.",
+    short: "Split unlockCallback logic into helper functions to avoid stack too deep.",
+    explanation: `Uniswap V4's unlockCallback often hits Solidity's "stack too deep" error because:
+
+1. You decode multiple parameters from the callback data
+2. You construct PoolKey with multiple fields
+3. You handle swap results with multiple values
+4. You do settlement logic with multiple tokens
+
+The fix is simple: split your logic into helper functions. Each function gets its own stack frame.
+
+Common pattern:
+- unlockCallback: decode data, call _executeSwap
+- _executeSwap: build PoolKey, call swap, call _settleSwap
+- _settleSwap: handle payment and receiving
+- _payToken: sync, transfer, settle pattern`,
+    wrongExample: `// PRONE TO STACK TOO DEEP
+function unlockCallback(bytes calldata data) external returns (bytes memory) {
+    // All this in one function = stack too deep!
+    (address recipient, address tokenIn, address tokenOut, 
+     uint24 fee, uint256 amountIn, uint256 minOut) = abi.decode(...);
+    
+    (address c0, address c1) = tokenIn < tokenOut ? ...;
+    
+    PoolKey memory poolKey = PoolKey({...});
+    
+    BalanceDelta delta = poolManager.swap(...);
+    
+    // More local variables for settlement...
+    // BOOM: Stack too deep!
+}`,
+    rightExample: `// RIGHT - split into helpers
+function unlockCallback(bytes calldata data) external returns (bytes memory) {
+    require(msg.sender == address(poolManager));
+    return _executeSwap(data);  // Delegate to helper
+}
+
+function _executeSwap(bytes calldata data) internal returns (bytes memory) {
+    (...) = abi.decode(data, (...));
+    PoolKey memory poolKey = _buildPoolKey(tokenIn, tokenOut, fee);
+    BalanceDelta delta = poolManager.swap(poolKey, params, "");
+    return _settleSwap(delta, ...);  // Another helper
+}
+
+function _settleSwap(...) internal returns (bytes memory) {
+    _payToken(tokenIn, amountIn, currencyIn);  // Yet another helper
+    poolManager.take(currencyOut, recipient, amountOut);
+    return abi.encode(amountOut);
+}
+
+function _payToken(address token, uint256 amount, Currency currency) internal {
+    poolManager.sync(currency);
+    IERC20(token).transfer(address(poolManager), amount);
+    poolManager.settle();
+}`,
+    severity: "medium",
+    keywords: ["uniswap", "v4", "stack", "deep", "callback", "helper", "function"],
+    relatedDocs: ["resource://uniswap/v4-guide"],
   },
 ];
 

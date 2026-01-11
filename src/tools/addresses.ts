@@ -89,11 +89,17 @@ Examples:
 - moonwell on Base: returns comptroller, mWETH, mUSDbC, flagshipETH vault
 
 Supported protocols by chain:
-- All chains: uniswapV3, aaveV3, chainlink
-- Base: aerodrome, moonwell, morpho
+- All chains: uniswapV3, uniswapV4, aaveV3, chainlink, permit2, universalRouter, multicall, create2, safe, entryPoint, oneInch, zeroX, pyth
+- Base: aerodrome, moonwell, morpho, chainlinkAutomation
 - Optimism: velodrome
-- Arbitrum: gmx, camelot
-- Mainnet: uniswapV2, sushiswap, curve, lido, compoundV3`,
+- Arbitrum: gmx, camelot, pendle
+- Mainnet: uniswapV2, sushiswap, curve, lido, compoundV3, eigenLayer, morphoBlue
+
+Infrastructure (same address all chains):
+- permit2: Universal token approvals (0x000000000022D473030F116dDEE9F6B43aC78BA3)
+- multicall: Batch read calls (0xcA11bde05977b3631167028862bE2a173976CA11)
+- entryPoint: ERC-4337 Account Abstraction (v06, v07)
+- safe: Gnosis Safe multisig (proxyFactory, singleton)`,
     inputSchema: {
       type: "object" as const,
       properties: {
