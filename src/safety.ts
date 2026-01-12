@@ -202,3 +202,275 @@ export function getSafeEnv(): Record<string, string> {
 
   return env;
 }
+
+// ============================================================
+// CRITICAL PATTERN VALIDATION
+// These patterns BLOCK file writes when detected
+// ============================================================
+
+export interface CriticalViolation {
+  message: string;
+  fix: string;
+  match: string;
+  line?: number;
+}
+
+export interface CriticalValidationResult {
+  valid: boolean;
+  violations: CriticalViolation[];
+}
+
+/**
+ * Critical patterns that BLOCK writes
+ * Each pattern has:
+ * - pattern: RegExp to match
+ * - message: Human-readable description of the violation
+ * - fix: How to fix it
+ * - fileTypes: Which file extensions to check (optional, defaults to all)
+ */
+const CRITICAL_VIOLATIONS: Array<{
+  pattern: RegExp;
+  message: string;
+  fix: string;
+  fileTypes?: string[];
+}> = [
+  // ============================================================
+  // SECURITY VIOLATIONS
+  // ============================================================
+  
+  // Infinite token approvals - major security risk
+  // Matches: .approve(x, max), approve(x, max), writeContractAsync with approve and max
+  {
+    pattern: /\.?approve\s*\(\s*[^,]+,\s*(?:type\s*\(\s*uint256\s*\)\s*\.max|ethers\.MaxUint256|MaxUint256|MAX_UINT256|2n?\s*\*\*\s*256n?\s*-\s*1n?|BigInt\s*\(\s*2\s*\)\s*\*\*\s*BigInt\s*\(\s*256\s*\)|"0x[fF]{64}")/gi,
+    message: "Infinite token approval (security risk)",
+    fix: "Approve only the specific amount needed, not max uint256. Example: approve(spender, depositAmount)",
+    fileTypes: [".ts", ".tsx", ".js", ".jsx"],
+  },
+  
+  // ============================================================
+  // HARDCODED ADDRESS VIOLATIONS
+  // ============================================================
+  
+  // Hardcoded addresses in variable declarations
+  {
+    pattern: /(?:const|let|var)\s+\w*(?:ADDRESS|ADDR|CONTRACT|TOKEN|VAULT|POOL|ROUTER|FACTORY)\w*\s*[:=]\s*["'`]0x[a-fA-F0-9]{40}["'`]/gi,
+    message: "Hardcoded contract address in variable",
+    fix: "Use useDeployedContractInfo('ContractName') for your contracts or add external contracts to externalContracts.ts via stack_configureExternalContracts",
+    fileTypes: [".ts", ".tsx", ".js", ".jsx"],
+  },
+  
+  // Hardcoded addresses as function arguments (common mistake)
+  {
+    pattern: /args:\s*\[\s*["'`]0x[a-fA-F0-9]{40}["'`]/gi,
+    message: "Hardcoded address in function arguments",
+    fix: "Get addresses dynamically: const { data: contractInfo } = useDeployedContractInfo('ContractName'); then use contractInfo?.address",
+    fileTypes: [".ts", ".tsx", ".js", ".jsx"],
+  },
+  
+  // ============================================================
+  // RAW WAGMI HOOK VIOLATIONS
+  // ============================================================
+  
+  // Importing raw wagmi hooks for contract interaction
+  {
+    pattern: /import\s*\{[^}]*\b(?:useReadContract|useWriteContract|useContractRead|useContractWrite)\b[^}]*\}\s*from\s*["'`]wagmi["'`]/gi,
+    message: "Raw wagmi hook import (use scaffold-eth hooks instead)",
+    fix: "Import from scaffold-eth: import { useScaffoldReadContract, useScaffoldWriteContract } from '~~/hooks/scaffold-eth'",
+    fileTypes: [".ts", ".tsx", ".js", ".jsx"],
+  },
+  
+  // Using raw wagmi hooks with address parameter
+  {
+    pattern: /\buseReadContract\s*\(\s*\{\s*(?:[^}]*\n)*?\s*address\s*:/gi,
+    message: "Raw wagmi useReadContract with address parameter",
+    fix: "Use useScaffoldReadContract({ contractName: 'YourContract', functionName: 'functionName' }) - addresses come from deployedContracts.ts automatically",
+    fileTypes: [".ts", ".tsx", ".js", ".jsx"],
+  },
+  
+  {
+    pattern: /\buseWriteContract\s*\(\s*\{\s*(?:[^}]*\n)*?\s*address\s*:/gi,
+    message: "Raw wagmi useWriteContract with address parameter",
+    fix: "Use useScaffoldWriteContract('YourContract') - addresses come from deployedContracts.ts automatically",
+    fileTypes: [".ts", ".tsx", ".js", ".jsx"],
+  },
+  
+  // ============================================================
+  // OLD HOOK NAME VIOLATIONS
+  // ============================================================
+  
+  // Old scaffold-eth hook names that no longer exist
+  {
+    pattern: /\buseScaffoldContractRead\b/g,
+    message: "Old scaffold-eth hook name (doesn't exist anymore)",
+    fix: "Use useScaffoldReadContract (the new name)",
+    fileTypes: [".ts", ".tsx", ".js", ".jsx"],
+  },
+  
+  {
+    pattern: /\buseScaffoldContractWrite\b/g,
+    message: "Old scaffold-eth hook name (doesn't exist anymore)",
+    fix: "Use useScaffoldWriteContract (the new name)",
+    fileTypes: [".ts", ".tsx", ".js", ".jsx"],
+  },
+  
+  // ============================================================
+  // DANGEROUS CONFIG VIOLATIONS
+  // ============================================================
+  
+  // Enabling burner wallets on mainnet (dangerous!)
+  {
+    pattern: /onlyLocalBurnerWallet\s*:\s*false/g,
+    message: "Dangerous config: enables burner wallets on mainnet",
+    fix: "Keep onlyLocalBurnerWallet: true (the default). Setting it to false enables burner wallets on mainnet which is a security risk!",
+    fileTypes: [".ts", ".tsx", ".js", ".jsx"],
+  },
+];
+
+/**
+ * Warning patterns that DON'T block but should be flagged
+ */
+const WARNING_PATTERNS: Array<{
+  pattern: RegExp;
+  message: string;
+  fix: string;
+  fileTypes?: string[];
+}> = [
+  // Inline ABI definitions (usually redundant)
+  {
+    pattern: /(?:const|let|var)\s+\w*ABI\w*\s*[:=]\s*\[/gi,
+    message: "Inline ABI definition (usually redundant)",
+    fix: "ABIs should come from deployedContracts.ts or externalContracts.ts automatically. Use stack_configureExternalContracts to add external protocol ABIs.",
+    fileTypes: [".ts", ".tsx", ".js", ".jsx"],
+  },
+  
+  // Generic hardcoded address (could be user input, so just warn)
+  {
+    pattern: /["'`]0x[a-fA-F0-9]{40}["'`]/g,
+    message: "Hardcoded Ethereum address detected",
+    fix: "If this is a contract address, use useDeployedContractInfo() or add to externalContracts.ts. If it's user input, this warning can be ignored.",
+    fileTypes: [".ts", ".tsx", ".js", ".jsx"],
+  },
+];
+
+/**
+ * Check if a file type matches the pattern's allowed file types
+ */
+function matchesFileType(filePath: string, fileTypes?: string[]): boolean {
+  if (!fileTypes || fileTypes.length === 0) {
+    return true; // No restriction, match all
+  }
+  
+  const lowerPath = filePath.toLowerCase();
+  return fileTypes.some(ext => lowerPath.endsWith(ext));
+}
+
+/**
+ * Find line number for a match in content
+ */
+function findLineNumber(content: string, matchIndex: number): number {
+  const beforeMatch = content.substring(0, matchIndex);
+  return (beforeMatch.match(/\n/g) || []).length + 1;
+}
+
+/**
+ * Validate content for critical pattern violations that should BLOCK writes
+ * 
+ * @param content - The file content to validate
+ * @param filePath - The file path (used to determine file type)
+ * @returns Validation result with any violations found
+ */
+export function validateCriticalPatterns(
+  content: string,
+  filePath: string
+): CriticalValidationResult {
+  const violations: CriticalViolation[] = [];
+  
+  for (const { pattern, message, fix, fileTypes } of CRITICAL_VIOLATIONS) {
+    // Skip if file type doesn't match
+    if (!matchesFileType(filePath, fileTypes)) {
+      continue;
+    }
+    
+    // Reset regex lastIndex for global patterns
+    pattern.lastIndex = 0;
+    
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      violations.push({
+        message,
+        fix,
+        match: match[0].length > 100 ? match[0].substring(0, 100) + "..." : match[0],
+        line: findLineNumber(content, match.index),
+      });
+      
+      // For non-global patterns, break after first match
+      if (!pattern.global) {
+        break;
+      }
+    }
+    
+    // Reset lastIndex again for next iteration
+    pattern.lastIndex = 0;
+  }
+  
+  return {
+    valid: violations.length === 0,
+    violations,
+  };
+}
+
+/**
+ * Get warning-level patterns (don't block, but flag)
+ * Used by the lintAll tool for comprehensive scanning
+ * 
+ * @param content - The file content to check
+ * @param filePath - The file path (used to determine file type)
+ * @returns Array of warnings found
+ */
+export function getWarningPatterns(
+  content: string,
+  filePath: string
+): Array<{ message: string; fix: string; match: string; line: number }> {
+  const warnings: Array<{ message: string; fix: string; match: string; line: number }> = [];
+  
+  for (const { pattern, message, fix, fileTypes } of WARNING_PATTERNS) {
+    // Skip if file type doesn't match
+    if (!matchesFileType(filePath, fileTypes)) {
+      continue;
+    }
+    
+    // Reset regex lastIndex for global patterns
+    pattern.lastIndex = 0;
+    
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      // Skip if this is already caught as a critical violation
+      // (e.g., a hardcoded address that's also in a variable)
+      const alreadyCritical = CRITICAL_VIOLATIONS.some(cv => {
+        cv.pattern.lastIndex = 0;
+        const isCritical = cv.pattern.test(match![0]);
+        cv.pattern.lastIndex = 0;
+        return isCritical;
+      });
+      
+      if (!alreadyCritical) {
+        warnings.push({
+          message,
+          fix,
+          match: match[0].length > 100 ? match[0].substring(0, 100) + "..." : match[0],
+          line: findLineNumber(content, match.index),
+        });
+      }
+      
+      // For non-global patterns, break after first match
+      if (!pattern.global) {
+        break;
+      }
+    }
+    
+    // Reset lastIndex again for next iteration
+    pattern.lastIndex = 0;
+  }
+  
+  return warnings;
+}

@@ -1,10 +1,38 @@
 # Deployment Workflow
 
-The correct deployment workflow for Scaffold-ETH projects. This is the ONLY path - no exceptions.
+The correct deployment workflow for Scaffold-ETH projects.
 
 ---
 
-## The Golden Rule
+## First Question: Do You Need Custom Contracts?
+
+**Not every project requires deploying smart contracts.** Before starting the deployment workflow, ask:
+
+```
+Do you need CUSTOM smart contract logic?
+│
+├── YES (custom vault, staking, new protocol, etc.)
+│   └── Follow the full deployment workflow below
+│
+└── NO (frontend for existing contracts)
+    └── Skip to "Frontend-Only Deployment" section
+```
+
+| Project Type | Custom Contract Needed? |
+|--------------|-------------------------|
+| Swap UI for Uniswap | NO - Uniswap exists |
+| Aave position dashboard | NO - Aave exists |
+| Portfolio tracker | NO - just reads existing contracts |
+| NFT gallery | NO - NFTs already exist |
+| Custom yield vault | YES - your vault logic |
+| Staking contract | YES - your staking logic |
+| Tax token | YES - custom token logic |
+
+**If you're building a frontend for existing protocols, skip the contract deployment workflow entirely - see the "Frontend-Only Deployment" section at the end.**
+
+---
+
+## The Golden Rule (For Custom Contracts)
 
 **NEVER ask users about testnets vs mainnet.**
 
@@ -145,20 +173,21 @@ Shows your deployer address and balances:
 
 #### How Much ETH Do I Need?
 
-**L2s are EXTREMELY CHEAP!** If you have $0.10+, TRY DEPLOYING!
+⚠️ **GAS IS MUCH CHEAPER THAN YOU THINK!** Ethereum mainnet gas is now typically 0.1-2 gwei (not 20-100 gwei like in 2021-2023). Deploying to mainnet is affordable for everyone!
 
-| Chain | Actual Deploy Cost | Minimum to Try | Comfortable Buffer |
-|-------|-------------------|----------------|-------------------|
-| **Ethereum Mainnet** | $20-100 | 0.01 ETH | 0.03-0.05 ETH |
-| **Base** | **$0.01-$0.10** | 0.00005 ETH (~$0.15) | 0.0005 ETH (~$1.50) |
-| **Optimism** | **$0.01-$0.10** | 0.00005 ETH (~$0.15) | 0.0005 ETH (~$1.50) |
-| **Arbitrum** | $0.05-$0.50 | 0.0002 ETH (~$0.60) | 0.001 ETH (~$3) |
-| **Polygon** | $0.01-$0.10 | 0.05 MATIC | 0.5 MATIC |
+| Chain | Typical Gas Price | Contract Deploy (~1M gas) | Minimum to Try |
+|-------|-------------------|---------------------------|----------------|
+| **Ethereum Mainnet** | 0.1-2 gwei | **$0.50-$6** | 0.001 ETH (~$3) |
+| **Base** | 0.01-0.02 gwei | **$0.02-$0.05** | 0.00002 ETH (~$0.06) |
+| **Optimism** | 0.01-0.05 gwei | **$0.02-$0.10** | 0.00002 ETH (~$0.06) |
+| **Arbitrum** | 0.01-0.1 gwei | **$0.03-$0.30** | 0.0001 ETH (~$0.30) |
+| **Polygon** | 30-100 gwei | **$0.01-$0.05** | 0.1 MATIC (~$0.05) |
 
-**CRITICAL**: If user has $0.10+ on Base/Optimism, **TELL THEM TO TRY DEPLOYING!**
-Don't say "you need $3-5 more" - that's wrong! Actual cost is usually under $0.10.
+**CRITICAL**: The "$20-100 for mainnet" estimates are OUTDATED from 2021-2023 when gas was 20-100+ gwei. Now mainnet is typically **$0.50-$6 per deployment!**
 
-**Real example**: A complex vault contract deployment on Base costs ~0.000003 ETH (~$0.01). You could deploy 300+ contracts with just 0.001 ETH!
+**Real example**: A complex vault contract deployment on Base costs ~$0.03. On Ethereum mainnet ~$0.50-$2 at normal gas prices.
+
+Use Blockscout MCP `direct_api_call` with `/api/v2/stats` to check live gas prices.
 
 ### Step 6.5: Configure Production RPC (Non-Ethereum Chains)
 
@@ -292,10 +321,10 @@ To deploy to mainnet, you'll need to run these commands yourself
 3. yarn account
    → Copy the deployer address shown
 
-4. Fund the deployer:
-   - L2s (Base/Optimism): $0.10 is usually enough! Actual cost ~$0.01-$0.10
-   - Arbitrum: $0.50 is usually enough! Actual cost ~$0.05-$0.50
-   - Ethereum mainnet: 0.01-0.05 ETH
+4. Fund the deployer (GAS IS CHEAP NOW!):
+   - L2s (Base/Optimism): $0.30 is plenty! Actual cost ~$0.02-$0.10
+   - Arbitrum: $0.50 is plenty! Actual cost ~$0.03-$0.30
+   - Ethereum mainnet: 0.001-0.005 ETH (~$3-15)
 
 5. yarn deploy --network <chain>
    → Enter your password when prompted
@@ -340,7 +369,7 @@ ALWAYS:
 > yarn account           # Copy the deployer address shown
 > ```
 > 
-> **If you have $0.10+ worth of ETH, try deploying!** Actual cost is ~$0.01-$0.10.
+> **If you have $0.30+ worth of ETH, try deploying!** Actual cost is ~$0.02-$0.10.
 > 
 > ```bash
 > yarn deploy --network [chain]   # Enter your password when prompted
@@ -357,7 +386,7 @@ ALWAYS:
 > yarn account           # Copy the deployer address shown
 > ```
 > 
-> Fund that address with **0.01-0.05 ETH** (mainnet is expensive - $20-100 depending on gas)
+> Fund that address with **0.001-0.005 ETH** (~$3-15) - gas is much cheaper now!
 > 
 > ```bash
 > yarn deploy --network mainnet   # Enter your password when prompted
@@ -393,9 +422,9 @@ That's why you test on the fork first! The fork has real mainnet state. If your 
 ### "Don't I need testnet ETH?"
 
 No. Fork development costs nothing. When ready for mainnet, you fund your deployer with real ETH:
-- **L2s (Base, Optimism)**: If you have $0.10+, try deploying! Actual cost is ~$0.01-$0.10
-- **Arbitrum**: If you have $0.50+, try deploying! Actual cost is ~$0.05-$0.50
-- **Ethereum mainnet**: 0.01-0.05 ETH ($30-150, mainnet is expensive)
+- **L2s (Base, Optimism)**: $0.30 is plenty! Actual cost ~$0.02-$0.10
+- **Arbitrum**: $0.50 is plenty! Actual cost ~$0.03-$0.30
+- **Ethereum mainnet**: 0.001-0.005 ETH (~$3-15) - gas is cheap now!
 
 ### "What about contract verification?"
 
@@ -427,8 +456,8 @@ Yes, but it's not recommended. Forks are strictly better for development. Only e
 │                   PRODUCTION (COSTS GAS)                          │
 │  ┌────────────┐    ┌────────────┐    ┌─────────────────────────┐ │
 │  │  yarn      │ -> │  yarn      │ -> │  Fund deployer:         │ │
-│  │  generate  │    │  account   │    │  L2: $0.10 usually enough│ │
-│  │ (encrypted)│    │ (get addr) │    │  Mainnet: 0.01-0.05 ETH │ │
+│  │  generate  │    │  account   │    │  L2: $0.30 is plenty!   │ │
+│  │ (encrypted)│    │ (get addr) │    │  Mainnet: 0.001-0.005 ETH│ │
 │  └────────────┘    └────────────┘    └─────────────────────────┘ │
 │         │                                                         │
 │         ▼                                                         │
@@ -439,10 +468,152 @@ Yes, but it's not recommended. Forks are strictly better for development. Only e
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-**L2s are EXTREMELY cheap!** Base/Optimism deploys cost $0.01-$0.10. If you have $0.10, TRY IT!
+**Deployment is EXTREMELY cheap now!** Base/Optimism cost $0.02-$0.10. Ethereum mainnet $0.50-$6. The "$20-100" myth is outdated!
 
 **Private keys are NEVER stored in plain text. Always encrypted with your password.**
 
 **RPC keys needed for non-Ethereum chains (Base, Optimism, etc.) - get free at alchemy.com**
 
-This is the way.
+This is the way (for custom contracts).
+
+---
+
+## Frontend-Only Deployment (No Custom Contracts)
+
+**If your project only needs a frontend for existing contracts, skip the entire contract deployment workflow.**
+
+### When This Applies
+
+- Building a UI for an existing protocol (Uniswap, Aave, Compound, etc.)
+- Creating a dashboard or analytics tool
+- Building an interface for an already-deployed contract
+- Portfolio trackers, NFT galleries, etc.
+
+### The Simplified Workflow
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                   DEVELOPMENT (SIMPLE)                            │
+│  ┌─────────────────┐    ┌──────────────────────────────────────┐ │
+│  │  Configure      │ -> │  Write frontend + yarn start          │ │
+│  │  External       │    │  (connects to mainnet RPC directly)   │ │
+│  │  Contracts      │    │                                        │ │
+│  └─────────────────┘    └──────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────┘
+                            │
+                            │ Ready for production
+                            ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                   PRODUCTION (NO GAS COSTS!)                      │
+│  ┌────────────────────────────────────────────────────────────┐  │
+│  │  1. Update targetNetworks in scaffold.config.ts            │  │
+│  │  2. Configure RPC (Alchemy key for non-Ethereum)           │  │
+│  │  3. Deploy frontend to Vercel/Netlify                      │  │
+│  └────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Step-by-Step
+
+#### 1. Initialize Project
+```bash
+npx create scaffold-eth@latest my-app
+cd my-app
+yarn install
+```
+
+#### 2. Configure External Contracts
+
+Use `stack_configureExternalContracts` to add the contracts you're interacting with:
+
+```
+stack_configureExternalContracts({
+  contracts: [
+    { name: "USDC", type: "ERC20" },
+    { name: "SwapRouter", type: "UniswapV3Router" },
+    { name: "pool", type: "AaveV3Pool" }
+  ]
+})
+```
+
+This populates `externalContracts.ts` so scaffold-eth hooks work with these contracts.
+
+#### 3. Write Your Frontend
+
+Build your UI in `packages/nextjs/app/page.tsx` using scaffold-eth hooks:
+
+```typescript
+// Read from existing contracts
+const { data: balance } = useScaffoldReadContract({
+  contractName: "USDC",
+  functionName: "balanceOf",
+  args: [userAddress],
+});
+
+// Write to existing contracts
+const { writeContractAsync } = useScaffoldWriteContract("SwapRouter");
+```
+
+#### 4. Test Locally
+
+```bash
+yarn start
+```
+
+Your frontend connects directly to mainnet RPCs. For **read-only** operations, this works without a fork.
+
+**If you need to test write operations** (swaps, approvals, etc.), start a fork:
+```bash
+yarn fork --network base
+```
+
+#### 5. Deploy Frontend to Production
+
+**a) Update target network in `packages/nextjs/scaffold.config.ts`:**
+```typescript
+targetNetworks: [chains.base], // Point to real mainnet
+```
+
+**b) Configure RPC (non-Ethereum chains only):**
+
+Get a free API key from https://alchemy.com and add to `.env.local`:
+```
+NEXT_PUBLIC_ALCHEMY_API_KEY=your_key
+```
+
+**c) Deploy to Vercel:**
+```bash
+cd packages/nextjs
+vercel
+```
+
+Add `NEXT_PUBLIC_ALCHEMY_API_KEY` to Vercel environment variables.
+
+### What You Skip
+
+| Step | Skip? | Why |
+|------|-------|-----|
+| `yarn fork` | Maybe | Only needed for testing writes |
+| `yarn deploy` | YES | No contracts to deploy |
+| `yarn generate` | YES | No deployer account needed |
+| `yarn account` | YES | No deployer to fund |
+| `yarn deploy --network` | YES | Nothing to deploy |
+| `yarn verify` | YES | Nothing to verify |
+
+### Cost Comparison
+
+| Approach | Development Cost | Production Cost |
+|----------|------------------|-----------------|
+| Custom contracts | Free (fork) | Gas fees ($0.02-$6) |
+| Frontend-only | Free | **$0** (just hosting) |
+
+### Example: Aave Dashboard
+
+User wants to see their Aave positions across chains.
+
+**No custom contracts needed!** Just:
+1. Configure AaveV3Pool and AaveV3PoolDataProvider as external contracts
+2. Build a frontend that reads position data
+3. Deploy to Vercel
+
+Total blockchain costs: **$0**

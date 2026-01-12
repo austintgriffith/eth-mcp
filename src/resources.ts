@@ -622,6 +622,228 @@ contract SwapHelper {
 /**
  * Token Whale Funding Guide - For funding test wallets on forks
  */
+/**
+ * Critical Rules for Post-Write Review
+ * This resource is read by the AI after writing frontend files to perform semantic code review
+ */
+const CRITICAL_RULES_REVIEW = `# Critical Rules Review
+
+After writing frontend code, review it against these rules. Report ANY violations.
+
+---
+
+## RULE 1: Never Hardcode Contract Addresses
+
+**Why:** Hardcoded addresses work on your fork but BREAK in production. Different environments have different addresses.
+
+**Violation Examples:**
+- \`const VAULT_ADDRESS = "0x31C2f2..."\`
+- \`const USDC = "0x833589..."\`
+- \`args: ["0x123...", amount]\` - Even in function arguments!
+- \`address: "0x..."\` in any hook or component
+
+**Correct Pattern:**
+\`\`\`typescript
+// For YOUR deployed contracts (from deployedContracts.ts)
+const { data: vaultInfo } = useDeployedContractInfo("YieldRedirectVault");
+const vaultAddress = vaultInfo?.address;
+
+// For external contracts (configured in externalContracts.ts)
+// Just use the contractName in scaffold hooks - address is automatic
+const { data: balance } = useScaffoldReadContract({
+  contractName: "USDC",  // Configured via stack_configureExternalContracts
+  functionName: "balanceOf",
+  args: [userAddress],
+});
+\`\`\`
+
+**Zero Exceptions:** If you see ANY 0x address (40 hex chars) in frontend code that's being used as a contract address, it's a violation.
+
+---
+
+## RULE 2: Use Scaffold-ETH Hooks, Not Raw Wagmi
+
+**Why:** Scaffold-eth hooks automatically get addresses and ABIs from deployedContracts.ts and externalContracts.ts.
+
+**Violation Examples:**
+- \`import { useReadContract } from "wagmi"\`
+- \`import { useWriteContract } from "wagmi"\`
+- \`useReadContract({ address: ..., abi: ... })\`
+- \`useWriteContract({ address: ..., abi: ... })\`
+
+**Correct Pattern:**
+\`\`\`typescript
+import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+
+// Reading
+const { data } = useScaffoldReadContract({
+  contractName: "YourContract",
+  functionName: "someFunction",
+});
+
+// Writing
+const { writeContractAsync } = useScaffoldWriteContract("YourContract");
+await writeContractAsync({ functionName: "doSomething", args: [arg1] });
+\`\`\`
+
+**Note:** \`useAccount\`, \`useBalance\`, \`useBlockNumber\` from wagmi are FINE - those don't involve contract addresses.
+
+---
+
+## RULE 3: Never Use Old Hook Names
+
+**Why:** The hook names changed. Old names don't exist.
+
+**Violations:**
+- \`useScaffoldContractRead\` → Use \`useScaffoldReadContract\`
+- \`useScaffoldContractWrite\` → Use \`useScaffoldWriteContract\`
+
+---
+
+## RULE 4: Never Write Infinite Token Approvals
+
+**Why:** Security risk. If the approved contract is compromised, attacker can drain ALL user tokens.
+
+**Violation Examples:**
+- \`approve(spender, type(uint256).max)\`
+- \`approve(spender, ethers.MaxUint256)\`
+- \`approve(spender, 2n ** 256n - 1n)\`
+- \`approve(spender, MAX_UINT256)\`
+- Any approval with "max" or very large numbers
+
+**Correct Pattern:**
+\`\`\`typescript
+// Approve only what's needed for the transaction
+await writeContractAsync({
+  functionName: "approve",
+  args: [spenderAddress, depositAmount],  // Exact amount, not max
+});
+\`\`\`
+
+---
+
+## RULE 5: Never Change onlyLocalBurnerWallet to false
+
+**Why:** The name is counterintuitive! \`false\` ENABLES burner wallets on mainnet (dangerous).
+
+**Violation:**
+\`\`\`typescript
+// scaffold.config.ts
+onlyLocalBurnerWallet: false,  // DANGEROUS - enables burner on mainnet!
+\`\`\`
+
+**Correct:** Leave it as \`true\` (the default). Scaffold-ETH handles this automatically.
+
+---
+
+## RULE 6: Don't Define ABIs Inline
+
+**Why:** ABIs come from deployedContracts.ts (auto-generated on deploy) or externalContracts.ts (configured via stack_configureExternalContracts).
+
+**Violation:**
+\`\`\`typescript
+const ERC20_ABI = [
+  { name: "approve", ... },
+  { name: "transfer", ... },
+] as const;
+\`\`\`
+
+**Correct:** Use scaffold hooks - they get ABIs automatically from the contract config.
+
+---
+
+## RULE 7: Approve-Then-Action Must Wait for Confirmation
+
+**Why:** On mainnet, transactions take ~12 seconds to mine. If you enable the action button after wallet signature (but before mining), the action will fail because the approval isn't confirmed yet. This works on local forks (instant mining) but BREAKS on mainnet.
+
+**Violation Examples:**
+- Enabling "Deposit" button immediately after approve tx hash is returned
+- Not using \`useWaitForTransactionReceipt\` to wait for mining
+- Not re-reading allowance after approval confirms
+- Button goes: "Approve" → "Deposit" (skipping "Confirming..." state)
+
+**Correct Pattern:**
+\`\`\`typescript
+import { useWaitForTransactionReceipt } from "wagmi";
+
+const [txHash, setTxHash] = useState<\`0x\${string}\` | undefined>();
+const [txState, setTxState] = useState<"idle" | "approving" | "confirming" | "ready">("idle");
+
+// CRITICAL: Wait for tx to be MINED, not just signed
+const { isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
+
+// CRITICAL: Re-read allowance after confirmation
+const { data: allowance, refetch: refetchAllowance } = useScaffoldReadContract({
+  contractName: "USDC",
+  functionName: "allowance",
+  args: [userAddress, vaultAddress],
+});
+
+useEffect(() => {
+  if (isConfirmed && txState === "confirming") {
+    refetchAllowance().then(() => setTxState("ready"));
+  }
+}, [isConfirmed, txState]);
+
+const handleApprove = async () => {
+  setTxState("approving");
+  const hash = await writeAsset({ functionName: "approve", args: [vault, amount] });
+  setTxHash(hash);
+  setTxState("confirming"); // NOT "ready"! Must wait for receipt!
+};
+
+// Button must show all states clearly
+<button disabled={txState !== "idle" && txState !== "ready"}>
+  {txState === "idle" && needsApproval && "Approve"}
+  {txState === "approving" && "Approve in Wallet..."}
+  {txState === "confirming" && "Confirming..."}  // CRITICAL STATE!
+  {txState === "ready" && "Deposit"}
+</button>
+\`\`\`
+
+**Key Rules:**
+1. NEVER enable action button after wallet signature - tx hash is NOT confirmation
+2. ALWAYS use \`useWaitForTransactionReceipt\` to wait for mining
+3. ALWAYS re-read on-chain state (allowance) after confirmation
+4. ALWAYS show "Confirming..." state while waiting for mining
+
+---
+
+## How to Review
+
+After writing any .tsx, .jsx, .ts, or .js file in the frontend:
+
+1. **Scan for 0x addresses** - Any 40-character hex string that's used as a contract address is a violation
+2. **Check imports** - Look for \`from "wagmi"\` imports of contract hooks
+3. **Check for "max" approvals** - Search for MaxUint, type(uint256).max, 2**256
+4. **Check hook names** - Make sure you're using useScaffoldReadContract not useScaffoldContractRead
+5. **Check config files** - If scaffold.config.ts was modified, verify onlyLocalBurnerWallet is true
+6. **Check approve-then-action flows** - If there's approve + deposit/swap/stake, verify:
+   - Uses \`useWaitForTransactionReceipt\` to wait for approval mining
+   - Re-reads allowance after confirmation (refetch)
+   - Has "Confirming..." state between approval and action
+   - Button is disabled during confirming state
+
+If you find violations, report them with:
+- The specific line/code
+- Which rule it violates
+- The correct fix
+
+---
+
+## Common Mistakes and Fixes
+
+| Mistake | Fix |
+|---------|-----|
+| \`const USDC = "0x833..."\` | Use \`useScaffoldReadContract({ contractName: "USDC" })\` after configuring in externalContracts |
+| \`import { useReadContract } from "wagmi"\` | Use \`import { useScaffoldReadContract } from "~~/hooks/scaffold-eth"\` |
+| \`approve(vault, MaxUint256)\` | \`approve(vault, depositAmount)\` |
+| \`useScaffoldContractRead\` | \`useScaffoldReadContract\` |
+| \`args: ["0x123...", amount]\` | \`const { data: info } = useDeployedContractInfo("Contract"); args: [info?.address, amount]\` |
+| Enable deposit after approve tx hash | Use \`useWaitForTransactionReceipt\`, show "Confirming...", then enable deposit |
+| No "Confirming..." state | Add state: idle → approving → confirming → ready, disable button during confirming |
+`;
+
 const WHALE_FUNDING_GUIDE = `# Funding Test Wallets with Tokens on Forks
 
 When users build apps that need tokens (USDC vaults, swap interfaces, DeFi), they need tokens in their test wallet.
@@ -816,6 +1038,12 @@ export const resourceDefinitions: Resource[] = [
     description: "CRITICAL: Complete V4 swap integration guide with gotchas, correct patterns, and addresses. READ THIS before building any V4 integration. Includes the #1 bug: settle() has NO parameters!",
     mimeType: "text/plain",
   },
+  {
+    uri: "resource://critical-rules/review",
+    name: "Critical Rules for Code Review",
+    description: "REVIEW REQUIRED: Read this after writing frontend code. Contains rules for hardcoded addresses, wagmi hooks, infinite approvals, and other critical patterns. The AI should review code against these rules.",
+    mimeType: "text/plain",
+  },
 ];
 
 /**
@@ -1005,6 +1233,14 @@ Only use testnet if user insists after explanation.`,
   if (uri === "resource://uniswap/v4-guide") {
     return {
       content: UNISWAP_V4_GUIDE,
+      mimeType: "text/plain",
+    };
+  }
+
+  // Critical rules for post-write code review
+  if (uri === "resource://critical-rules/review") {
+    return {
+      content: CRITICAL_RULES_REVIEW,
       mimeType: "text/plain",
     };
   }

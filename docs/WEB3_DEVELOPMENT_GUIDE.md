@@ -250,6 +250,58 @@ User → vault.deposit(amount) → vault calls transferFrom ✓
 
 **Frontend:** Check allowance, show "Approve" button if needed, then "Deposit".
 
+#### CRITICAL: Transaction Hash !== Confirmation
+
+**This is the #1 frontend bug on mainnet.** When the wallet returns a transaction hash, the transaction is NOT confirmed - it's only in the mempool waiting to be mined.
+
+```
+WRONG FLOW (works on local fork, breaks on mainnet):
+  Wallet signs → App gets tx hash → Enable "Deposit" button immediately
+                                    ↑
+                                    BUG: Tx not mined yet! Deposit will fail.
+
+CORRECT FLOW:
+  Wallet signs → App gets tx hash → Show "Confirming..." → Wait for receipt
+                                                           ↓
+                                    Re-read allowance → Allowance OK? → Enable "Deposit"
+```
+
+**Why this works locally but breaks on mainnet:**
+- Local fork (Anvil): Auto-mines instantly, tx confirms in ~0ms
+- Mainnet: Block time is ~12 seconds, tx takes time to mine
+
+**The fix:** Always use `useWaitForTransactionReceipt` from wagmi and re-read the on-chain state:
+
+```tsx
+import { useWaitForTransactionReceipt } from "wagmi";
+
+const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
+
+// Wait for mining
+const { isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
+
+// Re-read allowance after confirmation
+const { data: allowance, refetch } = useScaffoldReadContract({
+  contractName: "Token",
+  functionName: "allowance",
+  args: [user, spender],
+});
+
+useEffect(() => {
+  if (isConfirmed) {
+    refetch(); // Re-read on-chain state!
+  }
+}, [isConfirmed]);
+
+// Button state
+const needsApproval = !allowance || allowance < amount;
+const isPending = txHash && !isConfirmed;
+
+<button disabled={isPending}>
+  {isPending ? "Confirming..." : needsApproval ? "Approve" : "Deposit"}
+</button>
+```
+
 ### 2. NEVER Use Infinite Approvals
 
 ```tsx

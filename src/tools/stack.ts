@@ -847,10 +847,10 @@ This tool returns step-by-step instructions for the user to run in their termina
       const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
       const needsCustomRpc = ["base", "optimism", "arbitrum", "polygon"].includes(chain.toLowerCase());
       const fundingAmount = isL2 
-        ? "If you have $0.10+ worth of ETH, TRY DEPLOYING! Actual cost is ~$0.01-$0.10."
+        ? "If you have $0.30+ worth of ETH, TRY DEPLOYING! Actual cost is ~$0.02-$0.10."
         : chain === "mainnet" 
-          ? "0.01-0.05 ETH (mainnet is expensive - $30-150)"
-          : "For L2s (Base/Optimism): $0.10 is usually enough. For mainnet: 0.01-0.05 ETH";
+          ? "0.001-0.005 ETH (~$3-15) - gas is CHEAP now (0.1-2 gwei)!"
+          : "For L2s (Base/Optimism): $0.30 is plenty. For mainnet: 0.001-0.005 ETH (~$3-15)";
 
       // Build RPC configuration instructions for L2s
       const rpcInstructions = needsCustomRpc ? [
@@ -951,10 +951,10 @@ This tool returns step-by-step instructions for the user to run in their termina
       const isL2 = ["base", "optimism", "arbitrum"].includes(chain.toLowerCase());
       const needsCustomRpc = ["base", "optimism", "arbitrum", "polygon"].includes(chain.toLowerCase());
       const fundingAmount = isL2 
-        ? "If you have $0.10+ worth of ETH, TRY DEPLOYING! Actual cost is ~$0.01-$0.10."
+        ? "If you have $0.30+ worth of ETH, TRY DEPLOYING! Actual cost is ~$0.02-$0.10."
         : chain === "mainnet" 
-          ? "0.01-0.05 ETH (mainnet is expensive - $30-150)"
-          : "For L2s (Base/Optimism): $0.10 is usually enough. For mainnet: 0.01-0.05 ETH";
+          ? "0.001-0.005 ETH (~$3-15) - gas is CHEAP now (0.1-2 gwei)!"
+          : "For L2s (Base/Optimism): $0.30 is plenty. For mainnet: 0.001-0.005 ETH (~$3-15)";
 
       // Return instructions instead of executing
       return {

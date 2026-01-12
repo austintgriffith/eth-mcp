@@ -176,7 +176,35 @@ The answer is ALWAYS the same workflow. No questions needed.
 
 **If you skip this step, the production app will show "429 Too Many Requests" errors and be completely unusable.**
 
-## The ONLY Deployment Path
+## CRITICAL RULE #4: Recognize Frontend-Only Projects
+
+**Not every project needs custom smart contracts!** Before starting the deployment workflow, ask:
+
+Does this project need CUSTOM smart contract logic?
+
+| Project Type | Custom Contract Needed? |
+|--------------|-------------------------|
+| Swap UI for Uniswap | NO - Uniswap exists |
+| Aave position dashboard | NO - Aave exists |
+| Portfolio tracker | NO - just reads existing contracts |
+| NFT gallery | NO - NFTs already exist |
+| Custom yield vault | YES - your vault logic |
+| Staking contract | YES - your staking logic |
+
+**If NO custom contracts needed:**
+1. Skip fork, skip deploy - just run frontend
+2. Configure external contracts via \`stack_configureExternalContracts\`
+3. Update \`targetNetworks\` in scaffold.config.ts to real mainnet
+4. Deploy frontend to Vercel - **no gas costs, no deployer account!**
+
+**Example - Swap Interface:**
+> "Since Uniswap already exists on Base, you don't need to deploy any contracts! I'll set up a frontend-only project that connects to the existing Uniswap contracts."
+
+---
+
+## The Deployment Path (For Custom Contracts)
+
+**If you DO need custom contracts, follow this workflow:**
 
 ### Step 1: FORK (Development) - AI Can Run
 \`\`\`bash
@@ -213,16 +241,16 @@ yarn account
 - Shows deployer address and balances
 - User copies address to fund
 
-**Funding by Chain:**
-| Chain | Actual Deploy Cost | Minimum to Try |
-|-------|-------------------|----------------|
-| Ethereum | $20-100 | 0.01 ETH |
-| Base/Optimism | **$0.01-$0.10** | 0.00005 ETH (~$0.15) |
-| Arbitrum | $0.05-$0.50 | 0.0002 ETH (~$0.60) |
-| Polygon | $0.01-$0.10 | 0.05 MATIC |
+**Funding by Chain (GAS IS CHEAP NOW!):**
+| Chain | Typical Gas Price | Contract Deploy (~1M gas) | Minimum |
+|-------|-------------------|---------------------------|---------|
+| Ethereum | 0.1-2 gwei | **$0.50-$6** | 0.001 ETH (~$3) |
+| Base/Optimism | 0.01-0.02 gwei | **$0.02-$0.10** | 0.0001 ETH (~$0.30) |
+| Arbitrum | 0.01-0.1 gwei | **$0.03-$0.30** | 0.0001 ETH (~$0.30) |
+| Polygon | 30-100 gwei | **$0.01-$0.05** | 0.1 MATIC |
 
-**CRITICAL: If user has $0.10+ on Base/Optimism, TELL THEM TO TRY DEPLOYING!**
-Don't say "you need more money" - actual cost is usually under $0.10!
+⚠️ **The "$20-100 mainnet" myth is OUTDATED!** Gas was 20-100 gwei in 2021-2023. Now it's 0.1-2 gwei!
+Use Blockscout MCP \`direct_api_call\` with \`/api/v2/stats\` to check live gas prices.
 
 ### Step 5: DEPLOY TO MAINNET - ⚠️ USER MUST RUN
 \`\`\`bash
@@ -268,10 +296,10 @@ When the user has finished testing on the fork and wants to deploy to mainnet, p
 > 
 > **CRITICAL for L2s:** If you skip Step 1 (RPC config), your production app will fail with 429 errors!
 > 
-> **Funding:**
-> - L2s (Base, Optimism): If you have $0.10+, try deploying! Actual cost is ~$0.01-$0.10
-> - Arbitrum: If you have $0.50+, try deploying! Actual cost is ~$0.05-$0.50
-> - Ethereum mainnet: 0.01-0.05 ETH ($30-150)
+> **Funding (GAS IS CHEAP NOW!):**
+> - L2s (Base, Optimism): $0.30 is plenty! Actual cost ~$0.02-$0.10
+> - Arbitrum: $0.50 is plenty! Actual cost ~$0.03-$0.30
+> - Ethereum mainnet: 0.001-0.005 ETH (~$3-15) - NOT $30-150!
 > 
 > Let me know when you're done!"
 
@@ -299,9 +327,29 @@ When the user has finished testing on the fork and wants to deploy to mainnet, p
 3. **Free iteration**: Deploy 100 times, costs nothing
 4. **Real integrations**: Test against actual protocol deployments
 
-## Example Workflow
+## Example Workflows
 
-User: "Build me a swap app on Base"
+### Example A: Frontend-Only (No Custom Contracts)
+
+User: "Build me a swap interface for Uniswap on Base"
+
+**WRONG Response:**
+> "I'll set up a local fork and deploy your contracts..."
+
+**CORRECT Response:**
+> "Since Uniswap already exists on Base, you don't need to deploy any contracts! I'll set up a frontend-only project."
+> 
+> Then proceed with:
+> 1. \`stack_init({ chain: "base", ... })\`
+> 2. \`stack_install()\`
+> 3. \`stack_configureExternalContracts({ contracts: [{ name: "SwapRouter", type: "UniswapV3Router" }, { name: "USDC", type: "ERC20" }] })\`
+> 4. Write the swap UI in \`packages/nextjs/app/page.tsx\`
+> 5. Update \`targetNetworks\` to \`[chains.base]\` in scaffold.config.ts
+> 6. Deploy frontend to Vercel - **no gas costs!**
+
+### Example B: Custom Contract Needed
+
+User: "Build me a USDC vault on Base"
 
 **WRONG Response:**
 > "Should I deploy to Base Sepolia (testnet) or Base mainnet first?"
@@ -316,7 +364,7 @@ User: "Build me a swap app on Base"
 > Then proceed with:
 > 1. \`stack_init({ chain: "base", ... })\`
 > 2. \`stack_install()\`
-> 3. Write contracts
+> 3. Write the vault contract
 > 4. \`stack_start({ components: ["fork", "deploy", "frontend"] })\`
 > 
 > Everything runs locally. When you're ready for mainnet, you'll need to run a few commands manually (they require password input). I'll give you the exact steps when you're ready!

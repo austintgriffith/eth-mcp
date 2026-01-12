@@ -341,6 +341,90 @@ The goal is to build apps that look like they were designed by someone who cares
 
 ---
 
+## Transaction Flow UX Patterns
+
+**CRITICAL: Getting transaction flows wrong is the #1 cause of broken mainnet UX.**
+
+### The Approve-Then-Action Pattern
+
+Most DeFi interactions require two transactions: approve token spending, then perform the action (deposit, swap, stake). This flow MUST handle transaction confirmation timing correctly.
+
+#### Button State Machine
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  IDLE          →  SIGNING       →  CONFIRMING    →  READY      │
+│  "Approve"        "Approve..."     "Confirming..."   "Deposit"  │
+│  (clickable)      (disabled)       (disabled)        (clickable)│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**NEVER skip the "Confirming" state.** On mainnet, transactions take ~12 seconds to mine. If you enable the action button after wallet signature, the action will fail because approval isn't confirmed yet.
+
+#### Correct Button Implementation
+
+```tsx
+// State tracks the full transaction lifecycle
+const [txState, setTxState] = useState<
+  "idle" | "signing" | "confirming" | "ready" | "executing"
+>("idle");
+
+// Button shows appropriate state
+<button
+  onClick={needsApproval ? handleApprove : handleDeposit}
+  disabled={txState === "signing" || txState === "confirming"}
+  className={`btn btn-primary ${
+    (txState === "signing" || txState === "confirming") ? "loading" : ""
+  }`}
+>
+  {txState === "idle" && needsApproval && "Approve"}
+  {txState === "signing" && "Approve in Wallet..."}
+  {txState === "confirming" && "Confirming..."}
+  {txState === "ready" && "Deposit"}
+  {txState === "executing" && "Depositing..."}
+</button>
+```
+
+#### Visual Feedback Rules
+
+| State | Button Text | Button Style | Spinner |
+|-------|-------------|--------------|---------|
+| Needs approval | "Approve [TOKEN]" | `btn-primary` | No |
+| Waiting for wallet | "Approve in Wallet..." | `btn-primary loading` | Yes |
+| Waiting for mining | "Confirming..." | `btn-primary loading` | Yes |
+| Ready to deposit | "Deposit" | `btn-primary` | No |
+| Depositing | "Depositing..." | `btn-primary loading` | Yes |
+
+### Error States
+
+Always provide clear feedback when transactions fail:
+
+```tsx
+// Error display
+{error && (
+  <div className="alert alert-error mt-4">
+    <span>{error.message || "Transaction failed"}</span>
+  </div>
+)}
+
+// Retry capability - return to idle state
+const handleError = (e: Error) => {
+  setError(e);
+  setTxState("idle"); // Allow retry
+};
+```
+
+### Why This Matters for Mainnet
+
+| Environment | Block Time | What Happens |
+|-------------|------------|--------------|
+| Local Fork | ~0ms | Tx confirms instantly, bugs are hidden |
+| Mainnet | ~12s | Tx takes time, premature button enable = failure |
+
+**Test on a real mainnet (or slow fork) before launch.** The local fork auto-mines, hiding timing bugs.
+
+---
+
 ## Quick Reference
 
 ```
